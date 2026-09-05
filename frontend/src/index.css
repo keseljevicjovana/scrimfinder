@@ -1,0 +1,422 @@
+/* ============================================================
+   ScrimFinder — dizajn tokeni
+   Estetika: ŠARENI gejmerski neon — više boja u igri odjednom
+   (cyan, pink, purple, žuta, zelena, narandžasta, plava), dinamične
+   animirane pozadine i akcenti, ne samo tamnoplava scena.
+   ============================================================ */
+:root {
+  --bg: #0a0716;
+  --bg-elevated: #150f26;
+  --bg-card: #1a1330;
+  --border: #3a2a58;
+  --text: #f1eaff;
+  --text-muted: #9c8fc2;
+
+  --neon-cyan: #00f0ff;
+  --neon-pink: #ff2ec4;
+  --neon-purple: #b23bff;
+  --neon-yellow: #ffe14d;
+  --neon-green: #39ff9e;
+  --neon-orange: #ff8a3d;
+  --neon-blue: #4a7dff;
+  --neon-lime: #c6ff3d;
+  --danger: #ff4569;
+  --warn: #ffb020;
+  --accent: var(--neon-cyan);
+
+  --rainbow: linear-gradient(90deg, var(--neon-cyan), var(--neon-blue), var(--neon-purple), var(--neon-pink), var(--neon-orange), var(--neon-yellow), var(--neon-lime), var(--neon-green), var(--neon-cyan));
+
+  --font-display: 'Oswald', 'Arial Narrow', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --radius: 4px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  background-color: var(--bg);
+  position: relative;
+  overflow-x: hidden;
+}
+/* Šarena, DINAMIČNA pozadina — više obojenih "blob" izvora svjetlosti koji se sporo pomjeraju,
+   umjesto ravne tamnoplave scene. Ostaje suptilno (nisko opacity) da tekst ostane čitljiv. */
+body::before {
+  content: '';
+  position: fixed; inset: -10%;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(0,240,255,0.20), transparent 32%),
+    radial-gradient(circle at 85% 12%, rgba(255,46,196,0.18), transparent 30%),
+    radial-gradient(circle at 75% 78%, rgba(178,59,255,0.22), transparent 34%),
+    radial-gradient(circle at 20% 82%, rgba(255,138,61,0.15), transparent 30%),
+    radial-gradient(circle at 50% 50%, rgba(57,255,158,0.10), transparent 40%);
+  animation: bgDrift 22s ease-in-out infinite alternate;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10,7,22,0.55), rgba(10,7,22,0.85) 60%, rgba(10,7,22,0.97));
+  pointer-events: none;
+}
+@keyframes bgDrift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-2%, 2%) scale(1.06); }
+  100% { transform: translate(2%, -1%) scale(1.02); }
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+  margin: 0 0 0.5em;
+  color: var(--text);
+}
+h1 { text-shadow: 0 0 12px rgba(0,240,255,0.45), 0 0 2px rgba(0,240,255,0.6); }
+h2 { text-shadow: 0 0 8px rgba(178,59,255,0.4); color: var(--neon-purple); }
+h3 { text-shadow: 0 0 8px rgba(255,138,61,0.35); color: var(--neon-orange); }
+
+a { color: var(--neon-cyan); text-decoration: none; }
+.mono { font-family: var(--font-mono); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+.navbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; background: rgba(16,11,30,0.85); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border); box-shadow: 0 2px 20px rgba(178,59,255,0.15);
+  position: sticky; top: 0; z-index: 10;
+}
+.navbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px;
+  background: var(--rainbow); background-size: 300% 100%;
+  animation: borderSweep 8s linear infinite; opacity: 0.8;
+}
+.navbar { position: sticky; }
+.navbar .logo {
+  font-family: var(--font-display); font-size: 22px; letter-spacing: 0.06em; color: var(--neon-cyan);
+  text-shadow: 0 0 8px rgba(0,240,255,0.7);
+}
+.navbar .logo span { color: var(--neon-pink); text-shadow: 0 0 8px rgba(255,46,196,0.8); }
+.navbar nav { display: flex; gap: 18px; align-items: center; }
+.navbar nav a, .navbar nav button {
+  color: var(--text-muted); background: none; border: none; cursor: pointer;
+  font-size: 14px; font-family: var(--font-body); text-transform: uppercase; letter-spacing: 0.04em;
+  transition: color 0.15s, text-shadow 0.15s;
+}
+.navbar nav a:nth-of-type(3n+1):hover, .navbar nav button:hover { color: var(--neon-cyan); text-shadow: 0 0 6px rgba(0,240,255,0.7); }
+.navbar nav a:nth-of-type(3n+2):hover { color: var(--neon-lime); text-shadow: 0 0 6px rgba(198,255,61,0.7); }
+.navbar nav a:nth-of-type(3n+3):hover { color: var(--neon-orange); text-shadow: 0 0 6px rgba(255,138,61,0.7); }
+.badge-count {
+  background: var(--neon-pink); color: #0d0819; border-radius: 999px;
+  font-size: 11px; padding: 1px 6px; margin-left: 4px; box-shadow: 0 0 6px var(--neon-pink);
+}
+
+.card {
+  position: relative;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px; box-shadow: 0 0 0 1px rgba(178,59,255,0.05), 0 4px 20px rgba(0,0,0,0.35);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  overflow: hidden;
+}
+a.card:hover, .card.card-hover:hover {
+  transform: translateY(-3px);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 0 1px rgba(0,240,255,0.15), 0 10px 30px rgba(0,0,0,0.45), 0 0 20px rgba(0,240,255,0.12);
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--rainbow); background-size: 300% 100%; opacity: 0.55;
+  animation: borderSweep 10s linear infinite;
+}
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 720px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+input, select, textarea, button {
+  font-family: var(--font-body); font-size: 14px;
+}
+input, select, textarea {
+  width: 100%; padding: 10px 12px; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+}
+select {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  cursor: pointer; padding-right: 34px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1L7 7L13 1' stroke='%2300f0ff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+select:hover { border-color: var(--neon-cyan); }
+select option { background: var(--bg-elevated); color: var(--text); padding: 8px; }
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 0 2px rgba(0,240,255,0.25);
+}
+input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--neon-cyan); }
+label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 4px; }
+.field { margin-bottom: 14px; }
+
+.btn {
+  display: inline-block; padding: 10px 18px; border-radius: 6px; border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue) 45%, var(--neon-purple) 100%);
+  color: #0a0716; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; cursor: pointer; font-size: 13px;
+  box-shadow: 0 0 12px rgba(0,240,255,0.4); transition: all 0.15s;
+}
+.btn:hover { background: linear-gradient(135deg, var(--neon-pink), var(--neon-orange) 55%, var(--neon-yellow) 100%); box-shadow: 0 0 18px rgba(255,46,196,0.6); transform: translateY(-1px); }
+.btn-outline { background: transparent; color: var(--neon-cyan); box-shadow: none; border: 1px solid var(--neon-cyan); }
+.btn-outline:hover { background: rgba(0,240,255,0.1); color: var(--neon-cyan); box-shadow: 0 0 10px rgba(0,240,255,0.4); }
+.btn-danger { background: linear-gradient(135deg, var(--danger), #ff8a3d); border-color: var(--danger); color: #fff; box-shadow: 0 0 10px rgba(255,69,105,0.5); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+.rank-badge {
+  font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: var(--radius);
+  text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--border); color: var(--text-muted);
+}
+.rank-Bronze { color: #e08f4e; border-color: #e08f4e; text-shadow: 0 0 6px rgba(224,143,78,0.6); }
+.rank-Silver { color: #d8d8e6; border-color: #d8d8e6; text-shadow: 0 0 6px rgba(216,216,230,0.6); }
+.rank-Gold { color: var(--neon-yellow); border-color: var(--neon-yellow); text-shadow: 0 0 6px rgba(255,225,77,0.7); }
+.rank-Platinum { color: var(--neon-cyan); border-color: var(--neon-cyan); text-shadow: 0 0 6px rgba(0,240,255,0.7); }
+.rank-Diamond { color: #7aa7ff; border-color: #7aa7ff; text-shadow: 0 0 6px rgba(122,167,255,0.7); }
+.rank-Pro { color: var(--neon-pink); border-color: var(--neon-pink); text-shadow: 0 0 6px rgba(255,46,196,0.7); }
+
+.status-pill { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; border: 1px solid transparent; }
+.status-na_cekanju { background: rgba(255,176,32,0.15); color: var(--warn); border-color: rgba(255,176,32,0.4); }
+.status-prihvacen, .status-prihvacena, .status-odigran { background: rgba(57,255,158,0.15); color: var(--neon-green); border-color: rgba(57,255,158,0.4); }
+.status-odbijen, .status-odbijena, .status-otkazan { background: rgba(255,69,105,0.15); color: var(--danger); border-color: rgba(255,69,105,0.4); }
+
+.error-text { color: var(--danger); font-size: 13px; margin-top: 6px; }
+.muted { color: var(--text-muted); font-size: 13px; }
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 20px 0; }
+
+.bracket { display: flex; gap: 32px; overflow-x: auto; padding: 10px 0; }
+.bracket-round { display: flex; flex-direction: column; justify-content: space-around; gap: 20px; min-width: 220px; }
+.bracket-slot { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; }
+.bracket-team { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+.bracket-team.winner { color: var(--neon-green); font-weight: 600; text-shadow: 0 0 6px rgba(57,255,158,0.6); }
+
+/* ============================================================
+   DEO 2 — dashboard (početna za prijavljene), animacije, chat widget
+   ============================================================ */
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 6px var(--neon-pink), 0 0 0 0 rgba(255,46,196,0.5); }
+  50% { box-shadow: 0 0 14px var(--neon-pink), 0 0 0 5px rgba(255,46,196,0); }
+}
+@keyframes floatUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes borderSweep {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.fade-in { animation: floatUp 0.35s ease both; }
+
+/* --- Hero statistika (dashboard) --- */
+.stat-hero {
+  position: relative;
+  background: linear-gradient(135deg, rgba(0,240,255,0.10), rgba(178,59,255,0.09) 35%, rgba(255,46,196,0.08) 65%, rgba(255,138,61,0.07));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  overflow: hidden;
+}
+.stat-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: var(--rainbow);
+  background-size: 300% 100%;
+  opacity: 0.7;
+  height: 3px; top: 0; left: 0; right: 0;
+  animation: borderSweep 6s linear infinite;
+}
+.stat-hero-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.stat-hero-name { font-family: var(--font-display); font-size: 24px; text-transform: uppercase; }
+.stat-hero-sub { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat-box {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; transition: transform 0.15s, border-color 0.15s;
+}
+.stat-box:hover { transform: translateY(-2px); border-color: var(--neon-cyan); }
+.stat-box:nth-of-type(4n+1):hover { border-color: var(--neon-cyan); }
+.stat-box:nth-of-type(4n+2):hover { border-color: var(--neon-pink); }
+.stat-box:nth-of-type(4n+3):hover { border-color: var(--neon-lime); }
+.stat-box:nth-of-type(4n+4):hover { border-color: var(--neon-orange); }
+.stat-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.stat-box .value { font-family: var(--font-mono); font-size: 26px; margin-top: 4px; }
+
+.winrate-bar-track { height: 6px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; margin-top: 8px; }
+.winrate-bar-fill { height: 100%; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green)); border-radius: 999px; transition: width 0.4s ease; }
+
+/* --- Section headings sa akcentnom linijom --- */
+.section-heading { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; }
+.section-heading .bar { width: 4px; height: 20px; background: linear-gradient(180deg, var(--neon-cyan), var(--neon-pink)); border-radius: 2px; }
+.section-heading h2 { margin: 0; font-size: 18px; }
+
+.dashboard-columns { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .dashboard-columns { grid-template-columns: 1fr; } }
+
+.mini-match-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg-elevated); margin-bottom: 8px; font-size: 13px;
+}
+.mini-match-row .vs { color: var(--text-muted); font-size: 11px; margin: 0 6px; }
+.mini-match-row .result-w { color: var(--neon-green); font-weight: 700; }
+.mini-match-row .result-l { color: var(--danger); font-weight: 700; }
+
+.tournament-strip {
+  display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px;
+}
+.tournament-chip {
+  min-width: 190px; background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; transition: border-color 0.15s, transform 0.15s;
+}
+.tournament-chip:hover { border-color: var(--neon-purple); transform: translateY(-2px); }
+.tournament-chip:nth-of-type(3n+1):hover { border-color: var(--neon-cyan); }
+.tournament-chip:nth-of-type(3n+2):hover { border-color: var(--neon-pink); }
+.tournament-chip:nth-of-type(3n+3):hover { border-color: var(--neon-lime); }
+.tournament-chip .countdown { font-family: var(--font-mono); color: var(--neon-yellow); font-size: 12px; margin-top: 6px; }
+
+/* ============================================================
+   CHAT WIDGET — plutajući pravougaonik u donjem desnom uglu
+   ============================================================ */
+.chat-widget { position: fixed; right: 20px; bottom: 20px; z-index: 999; font-family: var(--font-body); }
+
+.chat-toggle-btn {
+  position: relative; width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 24px rgba(178,59,255,0.5); font-size: 24px; color: #fff;
+}
+.chat-toggle-badge {
+  position: absolute; top: -4px; right: -4px; background: var(--neon-pink); color: #0d0819;
+  border-radius: 999px; font-size: 11px; font-weight: 800; min-width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  animation: pulseGlow 1.8s ease-in-out infinite; border: 2px solid var(--bg);
+}
+
+.chat-panel {
+  position: absolute; bottom: 68px; right: 0; width: 340px; max-height: 480px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.55); display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.chat-panel-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.chat-panel-header h4 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; }
+.chat-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.chat-tab { flex: 1; text-align: center; padding: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+.chat-tab.active { color: var(--neon-cyan); border-color: var(--neon-cyan); }
+.chat-tab .count { color: var(--neon-pink); margin-left: 4px; }
+
+.chat-list { overflow-y: auto; flex: 1; }
+.chat-list-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.12s;
+}
+.chat-list-item:hover { background: rgba(255,255,255,0.03); }
+.chat-list-item .name { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.chat-list-item .preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.chat-list-item .meta { margin-left: auto; text-align: right; }
+.chat-list-item .unread-dot { background: var(--neon-pink); color: #0d0819; font-size: 10px; font-weight: 800; border-radius: 999px; padding: 1px 6px; }
+.chat-pin { color: var(--neon-yellow); font-size: 11px; }
+
+.chat-thread { display: flex; flex-direction: column; height: 420px; }
+.chat-thread-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.chat-thread-header button.back { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.chat-bubble { max-width: 75%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.35; }
+.chat-bubble.in { align-self: flex-start; background: var(--bg-elevated); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+.chat-bubble.out { align-self: flex-end; background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink)); color: #fff; border-bottom-right-radius: 3px; }
+.chat-input-row { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--border); }
+.chat-input-row input { flex: 1; }
+.chat-request-banner { padding: 10px 14px; background: rgba(255,176,32,0.1); border-bottom: 1px solid var(--border); font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+/* ============================================================
+   DEO 3 — glasanje za rezultat, streak, kalendar, moji timovi
+   ============================================================ */
+
+.streak-badge {
+  display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono);
+  font-size: 12px; padding: 3px 10px; border-radius: 999px; font-weight: 700;
+  background: linear-gradient(90deg, var(--neon-orange), var(--neon-yellow));
+  color: #2a1a00; box-shadow: 0 0 10px rgba(255,138,61,0.5);
+}
+
+.progress-do-ranga { margin-top: 10px; }
+.progress-do-ranga .track { height: 8px; border-radius: 999px; background: var(--bg-elevated); overflow: hidden; border: 1px solid var(--border); }
+.progress-do-ranga .fill { height: 100%; background: var(--rainbow); background-size: 300% 100%; animation: borderSweep 5s linear infinite; }
+.progress-do-ranga .label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+.glasanje-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+@media (max-width: 600px) { .glasanje-grid { grid-template-columns: 1fr; } }
+.glas-btn {
+  padding: 18px 10px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg-elevated);
+  cursor: pointer; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.05em;
+  font-size: 15px; color: var(--text); transition: all 0.15s; text-align: center;
+}
+.glas-btn.pobjeda { border-color: var(--neon-green); }
+.glas-btn.pobjeda:hover, .glas-btn.pobjeda.izabrano { background: rgba(57,255,158,0.15); box-shadow: 0 0 16px rgba(57,255,158,0.4); color: var(--neon-green); }
+.glas-btn.poraz { border-color: var(--danger); }
+.glas-btn.poraz:hover, .glas-btn.poraz.izabrano { background: rgba(255,69,105,0.15); box-shadow: 0 0 16px rgba(255,69,105,0.4); color: var(--danger); }
+.glas-btn.nerijeseno { border-color: var(--warn); }
+.glas-btn.nerijeseno:hover, .glas-btn.nerijeseno.izabrano { background: rgba(255,176,32,0.15); box-shadow: 0 0 16px rgba(255,176,32,0.4); color: var(--warn); }
+.glas-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.spor-banner {
+  background: rgba(255,69,105,0.12); border: 1px solid var(--danger); border-radius: 8px;
+  padding: 14px; margin-top: 14px; color: var(--danger); font-size: 13px;
+}
+
+.prisustvo-pitanje {
+  background: rgba(255,176,32,0.1); border: 1px solid var(--warn); border-radius: 8px;
+  padding: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+
+/* Moji timovi */
+.moj-tim-red {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 16px; border-radius: 10px; margin-bottom: 12px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  transition: border-color 0.15s, transform 0.15s;
+}
+.moj-tim-red:hover { transform: translateY(-2px); border-color: var(--neon-cyan); }
+.moj-tim-red.kapiten { border-color: var(--neon-yellow); box-shadow: 0 0 14px rgba(255,225,77,0.15); }
+.kapiten-oznaka { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--neon-yellow); font-weight: 700; }
+
+/* Kalendar */
+.kalendar-dan {
+  border-left: 3px solid var(--neon-purple); padding-left: 14px; margin-bottom: 20px;
+}
+.kalendar-dan-naslov { font-family: var(--font-mono); color: var(--neon-cyan); font-size: 13px; margin-bottom: 8px; text-transform: uppercase; }
+.kalendar-stavka {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 8px;
+}
+.kalendar-stavka .vrijeme { font-family: var(--font-mono); color: var(--neon-yellow); font-size: 13px; min-width: 50px; }
+
+/* Rangiranje tabovi */
+.rang-tabovi { display: flex; gap: 10px; margin-bottom: 20px; }
+
+/* Podešavanja / dostupnost editor u MyProfile */
+.dan-red { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.dan-naziv { min-width: 110px; font-size: 13px; }
+
+/* Isticanje prijavljenog korisnika / njegovih timova u tabelama rangiranja */
+.rang-red-istaknut {
+  background: linear-gradient(90deg, rgba(255,225,77,0.10), rgba(255,46,196,0.06)) !important;
+  box-shadow: inset 3px 0 0 var(--neon-yellow);
+}
+.rang-red-istaknut td { font-weight: 700; }
