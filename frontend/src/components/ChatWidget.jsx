@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useChatUI } from '../context/ChatUIContext';
 import AvatarSvg from '../avatar/AvatarSvg';
 
 function nazivKonverzacije(k) {
@@ -10,10 +11,9 @@ function nazivKonverzacije(k) {
 
 export default function ChatWidget() {
   const { korisnik } = useAuth();
-  const [otvoreno, setOtvoreno] = useState(false);
+  const { otvoren: otvoreno, setOtvoren: setOtvoreno, aktivnaId, setAktivnaId } = useChatUI();
   const [tab, setTab] = useState('chatovi');
   const [podaci, setPodaci] = useState({ prihvacene: [], zahtjevi: [], ukupnoNeprocitano: 0 });
-  const [aktivnaId, setAktivnaId] = useState(null);
   const [poruke, setPoruke] = useState([]);
   const [tekst, setTekst] = useState('');
   const [pretraga, setPretraga] = useState('');
@@ -171,11 +171,26 @@ export default function ChatWidget() {
               <div className="chat-messages" ref={poljeRef}>
                 {poruke
                   .filter((p) => !pretraga.trim() || p.tekst.toLowerCase().includes(pretraga.toLowerCase()))
-                  .map((p) => (
-                  <div key={p.id} className={`chat-bubble ${p.posiljalac_id === korisnik.id ? 'out' : 'in'}`} style={pretraga.trim() ? { outline: '1px solid var(--neon-yellow)' } : undefined}>
-                    {p.tekst}
-                  </div>
-                ))}
+                  .map((p, idx, niz) => {
+                    const mojaPoruka = p.posiljalac_id === korisnik.id;
+                    // U timskom (grupnom) čatu ima više učesnika — ime/avatar pošiljaoca se prikazuje
+                    // iznad poruke SAMO kad se promijeni pošiljalac (ne ponavlja se za svaku uzastopnu poruku iste osobe).
+                    const prethodna = niz[idx - 1];
+                    const prikaziIme = aktivna.tip === 'tim' && !mojaPoruka && (!prethodna || prethodna.posiljalac_id !== p.posiljalac_id);
+                    return (
+                      <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: mojaPoruka ? 'flex-end' : 'flex-start' }}>
+                        {prikaziIme && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3, marginLeft: 4 }}>
+                            <AvatarSvg avatar={p.posiljalac?.avatar} pol={p.posiljalac?.pol} size={16} glow={false} />
+                            <span className="muted" style={{ fontSize: 11, fontWeight: 600 }}>{p.posiljalac?.ime}</span>
+                          </div>
+                        )}
+                        <div className={`chat-bubble ${mojaPoruka ? 'out' : 'in'}`} style={pretraga.trim() ? { outline: '1px solid var(--neon-yellow)' } : undefined}>
+                          {p.tekst}
+                        </div>
+                      </div>
+                    );
+                  })}
                 {pretraga.trim() && poruke.filter((p) => p.tekst.toLowerCase().includes(pretraga.toLowerCase())).length === 0 && (
                   <p className="muted" style={{ fontSize: 12, textAlign: 'center' }}>Nema poruka koje sadrže "{pretraga}".</p>
                 )}

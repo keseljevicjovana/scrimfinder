@@ -4,11 +4,6 @@ const { posaljiNotifikaciju } = require('../utils/notify');
 const { provjeriDostignucaZaKorisnika } = require('../utils/achievements');
 const { nadjiPreklapanje } = require('../utils/kalendar');
 
-async function provjeriDaJeKapiten(tim_id, korisnik_id) {
-  const tim = await Tim.findByPk(tim_id);
-  return tim && tim.kapiten_id === korisnik_id ? tim : null;
-}
-
 async function provjeriDaJeClan(tim_id, korisnik_id) {
   const tim = await Tim.findByPk(tim_id);
   if (!tim) return null;

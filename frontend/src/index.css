@@ -420,3 +420,47 @@ label { display: block; font-size: 12px; text-transform: uppercase; letter-spaci
   box-shadow: inset 3px 0 0 var(--neon-yellow);
 }
 .rang-red-istaknut td { font-weight: 700; }
+
+/* ============================================================
+   Toast obavještenja — zamjena za ružne native alert() prozorčiće
+   ============================================================ */
+.toast-stack {
+  position: fixed; bottom: 24px; left: 24px; z-index: 1200;
+  display: flex; flex-direction: column-reverse; gap: 10px;
+  max-width: 340px;
+}
+.toast {
+  padding: 13px 18px; border-radius: 8px; font-size: 14px; cursor: pointer;
+  background: var(--bg-card); border: 1px solid var(--border);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  animation: toastUlaz 0.25s ease both;
+}
+.toast-info { border-left: 3px solid var(--neon-cyan); }
+.toast-success { border-left: 3px solid var(--neon-green); }
+.toast-error { border-left: 3px solid var(--danger); }
+@keyframes toastUlaz {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Dialog (confirm/izbor/prompt) — zamjena za native confirm()/prompt()
+   ============================================================ */
+.dialog-overlay {
+  position: fixed; inset: 0; z-index: 1300;
+  background: rgba(5,3,12,0.72); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  animation: dialogFade 0.15s ease both; padding: 20px;
+}
+.dialog-box {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; max-width: 400px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(178,59,255,0.1);
+  animation: dialogPop 0.2s ease both;
+}
+.dialog-box input, .dialog-box textarea { margin-top: 4px; }
+@keyframes dialogFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialogPop {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

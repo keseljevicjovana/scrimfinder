@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function TournamentDetail() {
   const { id } = useParams();
   const { korisnik } = useAuth();
+  const { toast, izborDialog, promptDialog } = useToast();
   const [turnir, setTurnir] = useState(null);
   const [mojiTimovi, setMojiTimovi] = useState([]);
   const [timId, setTimId] = useState('');
@@ -29,7 +31,7 @@ export default function TournamentDetail() {
       ucitaj();
       setTimId('');
     } catch (err) {
-      alert(err.response?.data?.poruka || 'Greška prilikom prijave.');
+      toast(err.response?.data?.poruka || 'Greška prilikom prijave.', 'error');
     }
   };
 
@@ -38,16 +40,18 @@ export default function TournamentDetail() {
       await api.post(`/turniri/${id}/bracket`);
       ucitaj();
     } catch (err) {
-      alert(err.response?.data?.poruka || 'Greška prilikom generisanja bracketa.');
+      toast(err.response?.data?.poruka || 'Greška prilikom generisanja bracketa.', 'error');
     }
   };
 
   const unesiRezultat = async (slotId, tim1, tim2) => {
-    const naziv = prompt(`Ko je pobijedio? Unesite tačan naziv:\n1) ${tim1.naziv}\n2) ${tim2.naziv}`);
-    const pobjednik = [tim1, tim2].find((t) => t.naziv === naziv);
-    if (!pobjednik) return alert('Naziv se ne poklapa ni sa jednim timom.');
-    const rezultat = prompt('Rezultat (npr. 2-1):') || '';
-    await api.put(`/turniri/bracket/${slotId}/rezultat`, { pobjednik_tim_id: pobjednik.id, rezultat });
+    const pobjednikId = await izborDialog('Ko je pobijedio?', [
+      { label: tim1.naziv, value: tim1.id },
+      { label: tim2.naziv, value: tim2.id },
+    ]);
+    if (!pobjednikId) return;
+    const rezultat = await promptDialog('Rezultat (npr. 2-1):') || '';
+    await api.put(`/turniri/bracket/${slotId}/rezultat`, { pobjednik_tim_id: pobjednikId, rezultat });
     ucitaj();
   };
 

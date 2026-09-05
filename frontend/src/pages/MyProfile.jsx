@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import AvatarEditor from '../avatar/AvatarEditor';
 import AvatarSvg from '../avatar/AvatarSvg';
 
@@ -9,6 +10,7 @@ const DANI = ['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota'
 
 export default function MyProfile() {
   const { korisnik, osvjeziKorisnika } = useAuth();
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const prvaPrijava = searchParams.get('prva-prijava') === '1' || korisnik?.mora_promijeniti_lozinku;
 
@@ -56,7 +58,7 @@ export default function MyProfile() {
   const sacuvajProfil = async (e) => {
     e.preventDefault();
     await api.put('/korisnici/profil', { ime, ...profil });
-    alert('Profil je ažuriran.');
+    toast('Profil je ažuriran.', 'success');
   };
 
   const izmijeniDan = (i, polje, vrijednost) => {

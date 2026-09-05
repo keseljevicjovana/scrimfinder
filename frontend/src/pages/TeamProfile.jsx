@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import RankBadge from '../components/RankBadge';
 import CommentSection from '../components/CommentSection';
 import GrbSvg from '../components/GrbSvg';
@@ -10,6 +11,7 @@ import GrbEditor from '../components/GrbEditor';
 export default function TeamProfile() {
   const { id } = useParams();
   const { korisnik } = useAuth();
+  const { toast, confirmDialog, promptDialog } = useToast();
   const [tim, setTim] = useState(null);
   const [stat, setStat] = useState(null);
   const [pozivKorisnikId, setPozivKorisnikId] = useState('');
@@ -29,36 +31,36 @@ export default function TeamProfile() {
     e.preventDefault();
     if (!pozivKorisnikId) return;
     await api.post(`/timovi/${id}/pozivnice`, { korisnik_id: Number(pozivKorisnikId) });
-    alert('Pozivnica je poslata.');
+    toast('Pozivnica je poslata.', 'success');
     setPozivKorisnikId('');
   };
 
   const apliciraj = async () => {
     await api.post(`/timovi/${id}/aplikacije`, { poruka: 'Želim da se pridružim timu.' });
-    alert('Aplikacija je poslata kapitenu.');
+    toast('Aplikacija je poslata kapitenu.', 'success');
   };
 
   const napustiTim = async () => {
-    if (!confirm('Sigurno želiš da napustiš ovaj tim?')) return;
+    if (!await confirmDialog('Sigurno želiš da napustiš ovaj tim?')) return;
     try {
       await api.post(`/timovi/${id}/napusti`);
       ucitaj();
     } catch (err) {
-      alert(err.response?.data?.poruka || 'Greška prilikom napuštanja tima.');
+      toast(err.response?.data?.poruka || 'Greška prilikom napuštanja tima.', 'error');
     }
   };
 
   const ukloniClana = async (korisnikId) => {
-    if (!confirm('Ukloniti ovog igrača iz tima?')) return;
+    if (!await confirmDialog('Ukloniti ovog igrača iz tima?')) return;
     await api.delete(`/timovi/${id}/clanovi/${korisnikId}`);
     ucitaj();
   };
 
   const prijaviTim = async () => {
-    const razlog = prompt('Razlog prijave tima:');
+    const razlog = await promptDialog('Razlog prijave tima:');
     if (razlog === null) return;
     await api.post('/prijave', { entitet_tip: 'korisnik', entitet_id: tim.kapiten.id, razlog });
-    alert('Prijava je poslata administratoru.');
+    toast('Prijava je poslata administratoru.', 'success');
   };
 
   return (

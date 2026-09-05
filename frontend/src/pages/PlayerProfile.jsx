@@ -4,10 +4,14 @@ import api from '../api/axios';
 import RankBadge from '../components/RankBadge';
 import AvatarSvg from '../avatar/AvatarSvg';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useChatUI } from '../context/ChatUIContext';
 
 export default function PlayerProfile() {
   const { id } = useParams();
   const { korisnik: ja } = useAuth();
+  const { promptDialog, toast } = useToast();
+  const { otvoriChat } = useChatUI();
   const [podaci, setPodaci] = useState(null);
 
   useEffect(() => {
@@ -15,10 +19,14 @@ export default function PlayerProfile() {
   }, [id]);
 
   const posaljiPoruku = async () => {
-    const tekst = prompt('Vaša poruka:');
+    const tekst = await promptDialog('Vaša poruka:');
     if (!tekst || !tekst.trim()) return;
-    await api.post('/chat/direktna', { primalac_id: Number(id), tekst });
-    alert('Poruka je poslata. Otvorite chat u donjem desnom uglu da nastavite razgovor.');
+    try {
+      const res = await api.post('/chat/direktna', { primalac_id: Number(id), tekst });
+      otvoriChat(res.data.konverzacija_id);
+    } catch (err) {
+      toast(err.response?.data?.poruka || 'Greška prilikom slanja poruke.', 'error');
+    }
   };
 
   if (!podaci) return <div className="container"><p className="muted">Učitavanje...</p></div>;

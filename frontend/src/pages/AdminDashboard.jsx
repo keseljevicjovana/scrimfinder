@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
+import { useToast } from '../context/ToastContext';
 
 export default function AdminDashboard() {
+  const { toast, confirmDialog } = useToast();
   const [stats, setStats] = useState(null);
   const [korisnici, setKorisnici] = useState([]);
   const [prijave, setPrijave] = useState([]);
@@ -28,7 +30,7 @@ export default function AdminDashboard() {
   };
 
   const obrisiKorisnika = async (id) => {
-    if (!confirm('Obrisati korisnika?')) return;
+    if (!await confirmDialog('Obrisati korisnika?')) return;
     await api.delete(`/admin/korisnici/${id}`);
     ucitajSve();
   };
@@ -44,7 +46,7 @@ export default function AdminDashboard() {
   };
 
   const obrisiSadrzaj = async (id) => {
-    if (!confirm('Obrisati prijavljeni komentar trajno?')) return;
+    if (!await confirmDialog('Obrisati prijavljeni komentar trajno?')) return;
     await api.delete(`/prijave/${id}/sadrzaj`);
     ucitajSve();
   };
@@ -60,14 +62,14 @@ export default function AdminDashboard() {
     e.preventDefault();
     await api.post('/dostignuca', novoDostignuce);
     setNovoDostignuce({ naziv: '', opis: '', uslov_tip: 'odigranih_meceva', uslov_vrijednost: 10 });
-    alert('Dostignuće je kreirano.');
+    toast('Dostignuće je kreirano.', 'success');
   };
 
   const napraviTurnir = async (e) => {
     e.preventDefault();
     await api.post('/turniri', noviTurnir);
     setNoviTurnir({ naziv: '', igra_id: '', datum: '', max_timova: 4, format: 'single_elimination' });
-    alert('Turnir je kreiran.');
+    toast('Turnir je kreiran.', 'success');
   };
 
   if (!stats) return <div className="container"><p className="muted">Učitavanje...</p></div>;

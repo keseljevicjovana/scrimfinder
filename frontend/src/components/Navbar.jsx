@@ -1,20 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../api/axios';
+import { useNotifications } from '../context/NotificationsContext';
 import AvatarSvg from '../avatar/AvatarSvg';
 
 export default function Navbar() {
   const { korisnik, odjava } = useAuth();
   const navigate = useNavigate();
-  const [nepr, setNepr] = useState(0);
-
-  useEffect(() => {
-    if (!korisnik) return;
-    api.get('/notifikacije').then((res) => {
-      setNepr(res.data.filter((n) => !n.procitano).length);
-    }).catch(() => {});
-  }, [korisnik]);
+  const { nepr } = useNotifications();
 
   return (
     <div className="navbar">

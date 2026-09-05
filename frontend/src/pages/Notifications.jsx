@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useNotifications } from '../context/NotificationsContext';
 
 // Mapira tip veze notifikacije na stvarnu rutu u aplikaciji — klik na notifikaciju
 // vodi TAČNO tamo gdje treba da se reaguje (na meč, tim, konverzaciju...), ne samo da je
@@ -37,6 +38,7 @@ const OPIS_TIPA = {
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const { osvjezi } = useNotifications();
   const [notifikacije, setNotifikacije] = useState([]);
 
   const ucitaj = () => api.get('/notifikacije').then((res) => setNotifikacije(res.data));
@@ -45,11 +47,13 @@ export default function Notifications() {
   const oznaci = async (id) => {
     await api.put(`/notifikacije/${id}/procitano`);
     ucitaj();
+    osvjezi();
   };
 
   const oznaciSve = async () => {
     await api.put('/notifikacije/procitano/sve');
     ucitaj();
+    osvjezi();
   };
 
   const klik = async (n) => {

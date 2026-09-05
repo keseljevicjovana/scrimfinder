@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import AvatarSvg from '../avatar/AvatarSvg';
 
 export default function CommentSection({ entitetTip, entitetId }) {
   const { korisnik } = useAuth();
+  const { toast, promptDialog } = useToast();
   const [komentari, setKomentari] = useState([]);
   const [tekst, setTekst] = useState('');
 
@@ -27,10 +29,10 @@ export default function CommentSection({ entitetTip, entitetId }) {
   };
 
   const prijaviKomentar = async (id) => {
-    const razlog = prompt('Razlog prijave komentara:');
+    const razlog = await promptDialog('Razlog prijave komentara:');
     if (razlog === null) return;
     await api.post('/prijave', { entitet_tip: 'komentar', entitet_id: id, razlog });
-    alert('Prijava je poslata administratoru.');
+    toast('Prijava je poslata administratoru.', 'success');
   };
 
   return (
