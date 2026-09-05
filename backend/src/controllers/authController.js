@@ -12,16 +12,17 @@ function napraviToken(korisnik) {
 function javniKorisnik(korisnik) {
   return {
     id: korisnik.id, ime: korisnik.ime, email: korisnik.email, uloga: korisnik.uloga,
-    pol: korisnik.pol, avatar: korisnik.avatar, mora_promijeniti_lozinku: korisnik.mora_promijeniti_lozinku,
+    pol: korisnik.pol, avatar: korisnik.avatar, bio: korisnik.bio, mora_promijeniti_lozinku: korisnik.mora_promijeniti_lozinku,
   };
 }
 
-// Registracija: korisnik unosi samo ime, email, pol i (opciono) osnovne podatke o igri.
+// Registracija: korisnik unosi ime, email, pol, opciono bio, i opciono VIŠE igara
+// (svaka sa svojom pozicijom) — igrač realno može igrati više igara istovremeno.
 // Lozinku NE bira sam — sistem generiše jednokratnu lozinku i šalje je na email.
 // Nalog dobija nasumično dodijeljen avatar u skladu sa polom, koji kasnije može uređivati.
 exports.registracija = async (req, res) => {
   try {
-    const { ime, email, pol, igra_id, pozicija_id, bio } = req.body;
+    const { ime, email, pol, bio, igre } = req.body;
     if (!ime || !email || !pol) {
       return res.status(400).json({ poruka: 'Ime, email i pol su obavezni.' });
     }
@@ -33,13 +34,14 @@ exports.registracija = async (req, res) => {
     const avatar = generisiNasumicniAvatar(pol);
 
     const korisnik = await Korisnik.create({
-      ime, email, lozinka_hash, pol, avatar, mora_promijeniti_lozinku: true,
+      ime, email, lozinka_hash, pol, avatar, bio: bio || null, mora_promijeniti_lozinku: true,
     });
 
-    if (igra_id) {
-      await ProfilIgraca.create({
-        korisnik_id: korisnik.id, igra_id, pozicija_id: pozicija_id || null, bio: bio || null,
-      });
+    if (Array.isArray(igre)) {
+      for (const i of igre) {
+        if (!i.igra_id) continue;
+        await ProfilIgraca.create({ korisnik_id: korisnik.id, igra_id: i.igra_id, pozicija_id: i.pozicija_id || null });
+      }
     }
 
     await posaljiJednokratnuLozinku(email, ime, jednokratnaLozinka);
@@ -71,9 +73,9 @@ exports.prijava = async (req, res) => {
 };
 
 exports.trenutniKorisnik = async (req, res) => {
-  const profil = await ProfilIgraca.findOne({
+  const profili = await ProfilIgraca.findAll({
     where: { korisnik_id: req.korisnik.id },
     include: [Igra, Pozicija],
   });
-  res.json({ korisnik: javniKorisnik(req.korisnik), profil });
+  res.json({ korisnik: javniKorisnik(req.korisnik), profili });
 };

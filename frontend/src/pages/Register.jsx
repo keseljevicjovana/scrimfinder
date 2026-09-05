@@ -7,14 +7,24 @@ export default function Register() {
   const { registracija } = useAuth();
   const navigate = useNavigate();
   const [igre, setIgre] = useState([]);
-  const [podaci, setPodaci] = useState({ ime: '', email: '', pol: 'muski', igra_id: '', pozicija_id: '', bio: '' });
+  const [podaci, setPodaci] = useState({ ime: '', email: '', pol: 'muski', bio: '' });
+  const [mojeIgre, setMojeIgre] = useState([{ igra_id: '', pozicija_id: '' }]);
   const [greska, setGreska] = useState('');
   const [poslato, setPoslato] = useState(false);
   const [ucitava, setUcitava] = useState(false);
 
   useEffect(() => { api.get('/igre').then((res) => setIgre(res.data)); }, []);
 
-  const izabranaIgra = igre.find((i) => i.id === Number(podaci.igra_id));
+  const izmijeniIgru = (idx, polje, vrijednost) => {
+    setMojeIgre((niz) => niz.map((r, i) => {
+      if (i !== idx) return r;
+      const novi = { ...r, [polje]: vrijednost };
+      if (polje === 'igra_id') novi.pozicija_id = ''; // promjena igre resetuje poziciju
+      return novi;
+    }));
+  };
+  const dodajIgru = () => setMojeIgre((niz) => [...niz, { igra_id: '', pozicija_id: '' }]);
+  const ukloniIgru = (idx) => setMojeIgre((niz) => niz.filter((_, i) => i !== idx));
 
   const posalji = async (e) => {
     e.preventDefault();
@@ -22,7 +32,7 @@ export default function Register() {
     setGreska('');
     setUcitava(true);
     try {
-      await registracija(podaci);
+      await registracija({ ...podaci, igre: mojeIgre.filter((r) => r.igra_id) });
       setPoslato(true);
     } catch (err) {
       setGreska(err.response?.data?.poruka || 'Greška prilikom registracije.');
@@ -67,21 +77,29 @@ export default function Register() {
           </div>
         </div>
         <div className="field">
-          <label>Primarna igra</label>
-          <select value={podaci.igra_id} onChange={(e) => setPodaci({ ...podaci, igra_id: e.target.value, pozicija_id: '' })}>
-            <option value="">— Izaberite igru —</option>
-            {igre.map((i) => <option key={i.id} value={i.id}>{i.naziv}</option>)}
-          </select>
+          <label>Igre koje igraš</label>
+          {mojeIgre.map((red, idx) => {
+            const izabranaIgra = igre.find((i) => i.id === Number(red.igra_id));
+            return (
+              <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
+                <select style={{ flex: 1 }} value={red.igra_id} onChange={(e) => izmijeniIgru(idx, 'igra_id', e.target.value)}>
+                  <option value="">— Izaberite igru —</option>
+                  {igre.map((i) => <option key={i.id} value={i.id}>{i.naziv}</option>)}
+                </select>
+                {izabranaIgra?.ima_pozicije && (
+                  <select style={{ flex: 1 }} value={red.pozicija_id} onChange={(e) => izmijeniIgru(idx, 'pozicija_id', e.target.value)}>
+                    <option value="">Pozicija —</option>
+                    {izabranaIgra.Pozicijas?.map((p) => <option key={p.id} value={p.id}>{p.naziv}</option>)}
+                  </select>
+                )}
+                {mojeIgre.length > 1 && (
+                  <button type="button" className="btn btn-sm btn-outline" onClick={() => ukloniIgru(idx)} title="Ukloni igru">✕</button>
+                )}
+              </div>
+            );
+          })}
+          <button type="button" className="btn btn-sm btn-outline" onClick={dodajIgru}>+ Dodaj igru</button>
         </div>
-        {izabranaIgra?.ima_pozicije && (
-          <div className="field">
-            <label>Pozicija</label>
-            <select value={podaci.pozicija_id} onChange={(e) => setPodaci({ ...podaci, pozicija_id: e.target.value })}>
-              <option value="">—</option>
-              {izabranaIgra.Pozicijas?.map((p) => <option key={p.id} value={p.id}>{p.naziv}</option>)}
-            </select>
-          </div>
-        )}
         <div className="field">
           <label>Bio</label>
           <textarea rows={3} value={podaci.bio} onChange={(e) => setPodaci({ ...podaci, bio: e.target.value })} />

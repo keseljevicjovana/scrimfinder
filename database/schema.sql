@@ -40,6 +40,7 @@ CREATE TABLE korisnici (
   lozinka_hash VARCHAR(255) NOT NULL,
   pol ENUM('muski','zenski') NOT NULL DEFAULT 'muski',
   avatar JSON,
+  bio TEXT, -- opšti opis igrača (premješteno iz profili_igraca — jedan igrač sad može imati VIŠE igara, bio je zajednički za sve)
   mora_promijeniti_lozinku BOOLEAN NOT NULL DEFAULT TRUE,
   uloga ENUM('igrac','admin') NOT NULL DEFAULT 'igrac',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -48,16 +49,20 @@ CREATE TABLE korisnici (
 -- ------------------------------------------------------------
 -- PROFIL IGRAČA (1:1 sa korisnikom — jedna igra/rank po profilu, po originalnom konceptu)
 -- ------------------------------------------------------------
+-- ------------------------------------------------------------
+-- PROFIL IGRAČA (ISPRAVKA: 1:N sa korisnikom — igrač MOŽE igrati više igara,
+-- svaka sa svojom pozicijom; uq_profil_igraca sprečava dodavanje iste igre dvaput)
+-- ------------------------------------------------------------
 CREATE TABLE profili_igraca (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  korisnik_id INT NOT NULL UNIQUE,
+  korisnik_id INT NOT NULL,
   igra_id INT NOT NULL,
   rank ENUM('Bronze','Silver','Gold','Platinum','Diamond','Pro') NOT NULL DEFAULT 'Bronze', -- ZASTARJELO: rank se više NE bira ručno; prikazuje se rank TIMA (izračunat iz mečeva), ova kolona se više ne koristi u UI-u
   pozicija_id INT NULL, -- može biti NULL ako igra nema pozicije
-  bio TEXT,
   FOREIGN KEY (korisnik_id) REFERENCES korisnici(id) ON DELETE CASCADE,
   FOREIGN KEY (igra_id) REFERENCES igre(id),
-  FOREIGN KEY (pozicija_id) REFERENCES pozicije(id)
+  FOREIGN KEY (pozicija_id) REFERENCES pozicije(id),
+  UNIQUE KEY uq_profil_igraca (korisnik_id, igra_id)
 );
 
 -- ------------------------------------------------------------

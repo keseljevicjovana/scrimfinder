@@ -95,36 +95,40 @@ async function seed() {
   });
 
   // Indeksi 0–15, korišćeni dalje u timovima (komentar uz svako ime govori u kom timu/timovima je).
+  // "igre" je NIZ (jedan igrač može igrati više igara) — svaki unos ima svoju igru i (opciono) poziciju.
   const podaciIgraca = [
-    { ime: 'Nikola Petrović', email: 'nikola@scrimfinder.rs', pol: 'muski', igra: lol, pozicija: pozLol['Mid'] },       // 0 - kapiten Crveni Zmajevi (LoL)
-    { ime: 'Stefan Ilić', email: 'stefan@scrimfinder.rs', pol: 'muski', igra: lol, pozicija: pozLol['Jungle'] },        // 1 - Crveni Zmajevi (LoL) + Zetska Falanga (CS2)
-    { ime: 'Miloš Stojanović', email: 'milos@scrimfinder.rs', pol: 'muski', igra: lol, pozicija: pozLol['Top'] },       // 2 - Crveni Zmajevi (LoL)
-    { ime: 'Aleksandar Đorđević', email: 'aleksandar@scrimfinder.rs', pol: 'muski', igra: lol, pozicija: pozLol['Bot'] }, // 3 - kapiten Beogradski Vukovi (LoL)
-    { ime: 'Jovana Filipović', email: 'jovana@scrimfinder.rs', pol: 'zenski', igra: lol, pozicija: pozLol['Support'] }, // 4 - Beogradski Vukovi (LoL)
-    { ime: 'Luka Marković', email: 'luka@scrimfinder.rs', pol: 'muski', igra: cs2, pozicija: null },                    // 5 - kapiten Balkan Legion (CS2)
-    { ime: 'Vuk Pavlović', email: 'vuk@scrimfinder.rs', pol: 'muski', igra: cs2, pozicija: null },                      // 6 - Balkan Legion (CS2) + Južna Vatra (Valorant)
-    { ime: 'Milica Simić', email: 'milica@scrimfinder.rs', pol: 'zenski', igra: cs2, pozicija: null },                  // 7 - Balkan Legion (CS2)
-    { ime: 'Uroš Radovanović', email: 'uros@scrimfinder.rs', pol: 'muski', igra: cs2, pozicija: null },                 // 8 - kapiten Novosadski Sokolovi (CS2)
-    { ime: 'Bogdan Kovačević', email: 'bogdan@scrimfinder.rs', pol: 'muski', igra: cs2, pozicija: null },               // 9 - kapiten Zetska Falanga (CS2) + Zmajevi Jug (LoL)
-    { ime: 'Petar Vasić', email: 'petar@scrimfinder.rs', pol: 'muski', igra: valorant, pozicija: pozVal['Duelist'] },   // 10 - kapiten Nišvil Fantomi (Valorant)
-    { ime: 'Ivana Milenković', email: 'ivana@scrimfinder.rs', pol: 'zenski', igra: valorant, pozicija: pozVal['Sentinel'] }, // 11 - Nišvil Fantomi (Valorant)
-    { ime: 'Nemanja Todorović', email: 'nemanja@scrimfinder.rs', pol: 'muski', igra: valorant, pozicija: pozVal['Controller'] }, // 12 - Nišvil Fantomi (Valorant)
-    { ime: 'Dušan Ristić', email: 'dusan@scrimfinder.rs', pol: 'muski', igra: valorant, pozicija: pozVal['Initiator'] }, // 13 - kapiten Južna Vatra (Valorant)
-    { ime: 'Tijana Popović', email: 'tijana@scrimfinder.rs', pol: 'zenski', igra: lol, pozicija: pozLol['Mid'] },       // 14 - kapiten Zmajevi Jug (LoL)
-    { ime: 'Vladimir Antić', email: 'vladimir@scrimfinder.rs', pol: 'muski', igra: cs2, pozicija: null },               // 15 - Novosadski Sokolovi (CS2)
+    { ime: 'Nikola Petrović', email: 'nikola@scrimfinder.rs', pol: 'muski', igre: [{ igra: lol, pozicija: pozLol['Mid'] }] },       // 0 - kapiten Crveni Zmajevi (LoL)
+    { ime: 'Stefan Ilić', email: 'stefan@scrimfinder.rs', pol: 'muski', igre: [{ igra: lol, pozicija: pozLol['Jungle'] }, { igra: cs2, pozicija: null }] }, // 1 - Crveni Zmajevi (LoL) + Zetska Falanga (CS2) — igra obje
+    { ime: 'Miloš Stojanović', email: 'milos@scrimfinder.rs', pol: 'muski', igre: [{ igra: lol, pozicija: pozLol['Top'] }, { igra: valorant, pozicija: pozVal['Sentinel'] }] }, // 2 - Crveni Zmajevi (LoL) + Južna Vatra (Valorant)
+    { ime: 'Aleksandar Đorđević', email: 'aleksandar@scrimfinder.rs', pol: 'muski', igre: [{ igra: lol, pozicija: pozLol['Bot'] }] }, // 3 - kapiten Beogradski Vukovi (LoL)
+    { ime: 'Jovana Filipović', email: 'jovana@scrimfinder.rs', pol: 'zenski', igre: [{ igra: lol, pozicija: pozLol['Support'] }] }, // 4 - Beogradski Vukovi (LoL)
+    { ime: 'Luka Marković', email: 'luka@scrimfinder.rs', pol: 'muski', igre: [{ igra: cs2, pozicija: null }] },                    // 5 - kapiten Balkan Legion (CS2)
+    { ime: 'Vuk Pavlović', email: 'vuk@scrimfinder.rs', pol: 'muski', igre: [{ igra: cs2, pozicija: null }, { igra: valorant, pozicija: pozVal['Duelist'] }] }, // 6 - Balkan Legion (CS2) + Južna Vatra (Valorant)
+    { ime: 'Milica Simić', email: 'milica@scrimfinder.rs', pol: 'zenski', igre: [{ igra: cs2, pozicija: null }] },                  // 7 - Balkan Legion (CS2)
+    { ime: 'Uroš Radovanović', email: 'uros@scrimfinder.rs', pol: 'muski', igre: [{ igra: cs2, pozicija: null }] },                 // 8 - kapiten Novosadski Sokolovi (CS2)
+    { ime: 'Bogdan Kovačević', email: 'bogdan@scrimfinder.rs', pol: 'muski', igre: [{ igra: cs2, pozicija: null }, { igra: lol, pozicija: pozLol['Support'] }] }, // 9 - kapiten Zetska Falanga (CS2) + Zmajevi Jug (LoL)
+    { ime: 'Petar Vasić', email: 'petar@scrimfinder.rs', pol: 'muski', igre: [{ igra: valorant, pozicija: pozVal['Duelist'] }] },   // 10 - kapiten Nišvil Fantomi (Valorant)
+    { ime: 'Ivana Milenković', email: 'ivana@scrimfinder.rs', pol: 'zenski', igre: [{ igra: valorant, pozicija: pozVal['Sentinel'] }] }, // 11 - Nišvil Fantomi (Valorant)
+    { ime: 'Nemanja Todorović', email: 'nemanja@scrimfinder.rs', pol: 'muski', igre: [{ igra: valorant, pozicija: pozVal['Controller'] }] }, // 12 - Nišvil Fantomi (Valorant)
+    { ime: 'Dušan Ristić', email: 'dusan@scrimfinder.rs', pol: 'muski', igre: [{ igra: valorant, pozicija: pozVal['Initiator'] }] }, // 13 - kapiten Južna Vatra (Valorant)
+    { ime: 'Tijana Popović', email: 'tijana@scrimfinder.rs', pol: 'zenski', igre: [{ igra: lol, pozicija: pozLol['Mid'] }] },       // 14 - kapiten Zmajevi Jug (LoL)
+    { ime: 'Vladimir Antić', email: 'vladimir@scrimfinder.rs', pol: 'muski', igre: [{ igra: cs2, pozicija: null }] },               // 15 - Novosadski Sokolovi (CS2)
   ];
 
   const igraci = [];
   for (const p of podaciIgraca) {
+    const nazivIgara = p.igre.map((i) => i.igra.naziv).join(' i ');
     const korisnik = await Korisnik.create({
       ime: p.ime, email: p.email, lozinka_hash: lozinkaHash, pol: p.pol,
       avatar: generisiNasumicniAvatar(p.pol), mora_promijeniti_lozinku: false,
+      bio: `Igram ${nazivIgara} već nekoliko godina, tražim ozbiljan tim za redovne skrimove.`,
     });
-    await ProfilIgraca.create({
-      korisnik_id: korisnik.id, igra_id: p.igra.id,
-      pozicija_id: p.pozicija ? p.pozicija.id : null,
-      bio: `Igram ${p.igra.naziv} već nekoliko godina, tražim ozbiljan tim za redovne skrimove.`,
-    });
+    for (const i of p.igre) {
+      await ProfilIgraca.create({
+        korisnik_id: korisnik.id, igra_id: i.igra.id,
+        pozicija_id: i.pozicija ? i.pozicija.id : null,
+      });
+    }
     // dostupnost: variramo malo po igraču da pretraga po danu/vremenu ima smisla
     const dani = [1, 3, 6];
     await Dostupnost.bulkCreate(dani.map((dan) => ({

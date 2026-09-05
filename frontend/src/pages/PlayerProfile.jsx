@@ -30,7 +30,7 @@ export default function PlayerProfile() {
   };
 
   if (!podaci) return <div className="container"><p className="muted">Učitavanje...</p></div>;
-  const { korisnik, profil, timovi, dostignuca, dostupnost, postotakPrisustva } = podaci;
+  const { korisnik, profili, timovi, dostignuca, dostupnost, postotakPrisustva } = podaci;
 
   const DANI = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
 
@@ -41,7 +41,11 @@ export default function PlayerProfile() {
           <AvatarSvg avatar={korisnik.avatar} pol={korisnik.pol} size={72} />
           <div>
             <h1 style={{ marginBottom: 4 }}>{korisnik.ime}</h1>
-            {profil?.Igra && <p className="muted">Omiljena igra: {profil.Igra.naziv}</p>}
+            {profili?.length > 0 && (
+              <p className="muted">
+                Igra: {profili.map((p) => p.Igra?.naziv + (p.Pozicija ? ` (${p.Pozicija.naziv})` : '')).join(', ')}
+              </p>
+            )}
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
@@ -57,7 +61,7 @@ export default function PlayerProfile() {
         </div>
       </div>
 
-      {profil?.bio && <p style={{ marginTop: 16 }}>{profil.bio}</p>}
+      {korisnik.bio && <p style={{ marginTop: 16 }}>{korisnik.bio}</p>}
 
       <div className="section-heading" style={{ marginTop: 24 }}><div className="bar" /><h2>Timovi ({timovi.length})</h2></div>
       {timovi.length === 0 && <p className="muted">Nije član nijednog tima.</p>}

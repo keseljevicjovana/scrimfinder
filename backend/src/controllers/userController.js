@@ -13,12 +13,12 @@ exports.dohvatiProfil = async (req, res) => {
   const korisnik = await Korisnik.findByPk(req.params.id, { attributes: { exclude: ['lozinka_hash'] } });
   if (!korisnik) return res.status(404).json({ poruka: 'Korisnik nije pronađen.' });
 
-  const profil = await ProfilIgraca.findOne({ where: { korisnik_id: korisnik.id }, include: [Igra, Pozicija] });
+  const profili = await ProfilIgraca.findAll({ where: { korisnik_id: korisnik.id }, include: [Igra, Pozicija] });
   const dostupnost = await Dostupnost.findAll({ where: { korisnik_id: korisnik.id } });
   const clanstva = await ClanTima.findAll({ where: { korisnik_id: korisnik.id }, include: [{ model: Tim, include: [Igra] }, Pozicija] });
 
   const timovi = [];
-  let ukupnoOdigranih = 0;
+  let ukupnoPozvanNa = 0;
   let ukupnoPrisustvovao = 0;
 
   for (const c of clanstva) {
@@ -28,44 +28,65 @@ exports.dohvatiProfil = async (req, res) => {
       where: { status: 'odigran', [Op.or]: [{ tim1_id: tim.id }, { tim2_id: tim.id }] },
     });
     const stat = izracunajTimskuStatistiku(mecevi, tim.id);
+    // Imenilac za % prisustva OVOG igrača = mečevi na koje je STVARNO pozvan (ima prisustvo-zapis),
+    // ne "svi odigrani mečevi tima" — sprečava da % ikad pređe 100 (npr. ako se tek naknadno pridružio timu).
+    const pozvanNa = await PrisustvoMeca.count({
+      where: { korisnik_id: korisnik.id, tim_id: tim.id },
+      include: [{ model: ScrimMec, where: { status: 'odigran' } }],
+    });
     const prisustvovao = await PrisustvoMeca.count({
       where: { korisnik_id: korisnik.id, tim_id: tim.id, status: 'moze' },
       include: [{ model: ScrimMec, where: { status: 'odigran' } }],
     });
-    ukupnoOdigranih += stat.odigranihMeceva;
+    ukupnoPozvanNa += pozvanNa;
     ukupnoPrisustvovao += prisustvovao;
 
     timovi.push({
-      tim: { id: tim.id, naziv: tim.naziv, logo_url: tim.logo_url, igra: tim.Igra?.naziv },
+      tim: { id: tim.id, naziv: tim.naziv, logo_url: tim.logo_url, grb: tim.grb, igra: tim.Igra?.naziv },
       uloga: tim.kapiten_id === korisnik.id ? 'Kapiten' : 'Član',
       pozicija: c.Pozicija ? c.Pozicija.naziv : null,
       rank: stat.rank,
       poeni: stat.poeni,
       odigranihMeceva: stat.odigranihMeceva,
       prisustvovao,
+      pozvanNa,
     });
   }
 
-  const postotakPrisustva = ukupnoOdigranih > 0 ? Math.round((ukupnoPrisustvovao / ukupnoOdigranih) * 100) : null;
+  const postotakPrisustva = ukupnoPozvanNa > 0 ? Math.min(100, Math.round((ukupnoPrisustvovao / ukupnoPozvanNa) * 100)) : null;
 
   const dostignuca = await KorisnikDostignuce.findAll({ where: { korisnik_id: korisnik.id }, include: [Dostignuce] });
 
   res.json({
-    korisnik, profil, dostupnost,
+    korisnik, profili, dostupnost,
     timovi,
     postotakPrisustva,
     dostignuca: dostignuca.map((d) => d.Dostignuce),
   });
 };
 
+// Ime, bio (na nivou korisnika) i lista igara koje igrač igra (svaka sa svojom pozicijom) —
+// za igre koristimo isti "obriši-pa-napravi-ponovo" pristup kao kod dostupnosti: jednostavnije
+// od ručnog upoređivanja koje su igre dodane/uklonjene/izmijenjene.
 exports.azurirajProfil = async (req, res) => {
-  const { igra_id, pozicija_id, bio, ime } = req.body;
-  if (ime) {
-    await Korisnik.update({ ime }, { where: { id: req.korisnik.id } });
+  const { ime, bio, igre } = req.body;
+  const izmjene = {};
+  if (ime !== undefined) izmjene.ime = ime;
+  if (bio !== undefined) izmjene.bio = bio;
+  if (Object.keys(izmjene).length > 0) {
+    await Korisnik.update(izmjene, { where: { id: req.korisnik.id } });
   }
-  const [profil] = await ProfilIgraca.findOrCreate({ where: { korisnik_id: req.korisnik.id }, defaults: { igra_id } });
-  await profil.update({ igra_id, pozicija_id, bio });
-  res.json({ poruka: 'Profil je ažuriran.', profil });
+
+  if (Array.isArray(igre)) {
+    await ProfilIgraca.destroy({ where: { korisnik_id: req.korisnik.id } });
+    for (const i of igre) {
+      if (!i.igra_id) continue;
+      await ProfilIgraca.create({ korisnik_id: req.korisnik.id, igra_id: i.igra_id, pozicija_id: i.pozicija_id || null });
+    }
+  }
+
+  const profili = await ProfilIgraca.findAll({ where: { korisnik_id: req.korisnik.id }, include: [Igra, Pozicija] });
+  res.json({ poruka: 'Profil je ažuriran.', profili });
 };
 
 // Ažuriranje izgleda avatara — korisnik bira kožu, oči, frizuru, boju kose, odjeću i dodatak.

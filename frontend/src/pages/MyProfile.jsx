@@ -14,9 +14,10 @@ export default function MyProfile() {
   const [searchParams] = useSearchParams();
   const prvaPrijava = searchParams.get('prva-prijava') === '1' || korisnik?.mora_promijeniti_lozinku;
 
-  const [profil, setProfil] = useState(null);
+  const [mojeIgre, setMojeIgre] = useState([]);
   const [igre, setIgre] = useState([]);
   const [ime, setIme] = useState(korisnik?.ime || '');
+  const [bio, setBio] = useState('');
   const [lozinkaForm, setLozinkaForm] = useState({ staraLozinka: '', novaLozinka: '', potvrdaNoveLozinke: '' });
   const [lozinkaPoruka, setLozinkaPoruka] = useState('');
   const [lozinkaGreska, setLozinkaGreska] = useState('');
@@ -28,7 +29,11 @@ export default function MyProfile() {
   useEffect(() => {
     if (korisnik.uloga === 'admin') return; // admin nema profil igrača/dostupnost — nema smisla za njegovu ulogu
     api.get('/igre').then((res) => setIgre(res.data));
-    api.get('/auth/ja').then((res) => setProfil(res.data.profil));
+    api.get('/auth/ja').then((res) => {
+      setBio(res.data.korisnik.bio || '');
+      const ucitane = (res.data.profili || []).map((p) => ({ igra_id: String(p.igra_id), pozicija_id: p.pozicija_id ? String(p.pozicija_id) : '' }));
+      setMojeIgre(ucitane.length > 0 ? ucitane : [{ igra_id: '', pozicija_id: '' }]);
+    });
     api.get(`/korisnici/${korisnik.id}`).then((res) => {
       const postojeca = res.data.dostupnost || [];
       if (postojeca.length > 0) {
@@ -57,9 +62,20 @@ export default function MyProfile() {
 
   const sacuvajProfil = async (e) => {
     e.preventDefault();
-    await api.put('/korisnici/profil', { ime, ...profil });
+    await api.put('/korisnici/profil', { ime, bio, igre: mojeIgre.filter((r) => r.igra_id) });
     toast('Profil je ažuriran.', 'success');
   };
+
+  const izmijeniIgru = (idx, polje, vrijednost) => {
+    setMojeIgre((niz) => niz.map((r, i) => {
+      if (i !== idx) return r;
+      const novi = { ...r, [polje]: vrijednost };
+      if (polje === 'igra_id') novi.pozicija_id = '';
+      return novi;
+    }));
+  };
+  const dodajIgru = () => setMojeIgre((niz) => [...niz, { igra_id: '', pozicija_id: '' }]);
+  const ukloniIgru = (idx) => setMojeIgre((niz) => niz.filter((_, i) => i !== idx));
 
   const izmijeniDan = (i, polje, vrijednost) => {
     setDostupnost((d) => d.map((x, idx) => (idx === i ? { ...x, [polje]: vrijednost } : x)));
@@ -135,21 +151,35 @@ export default function MyProfile() {
               <label>Ime i prezime</label>
               <input value={ime} onChange={(e) => setIme(e.target.value)} />
             </div>
-            {profil && (
-              <>
-                <div className="field">
-                  <label>Omiljena igra</label>
-                  <select value={profil.igra_id || ''} onChange={(e) => setProfil({ ...profil, igra_id: e.target.value })}>
-                    {igre.map((i) => <option key={i.id} value={i.id}>{i.naziv}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Bio</label>
-                  <textarea rows={3} value={profil.bio || ''} onChange={(e) => setProfil({ ...profil, bio: e.target.value })} />
-                </div>
-                <p className="muted" style={{ fontSize: 12 }}>Napomena: rank se više ne bira ručno — prikazuje se rank tvog TIMA, izračunat automatski iz odigranih mečeva.</p>
-              </>
-            )}
+            <div className="field">
+              <label>Igre koje igraš</label>
+              {mojeIgre.map((red, idx) => {
+                const izabranaIgra = igre.find((i) => i.id === Number(red.igra_id));
+                return (
+                  <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <select style={{ flex: 1 }} value={red.igra_id} onChange={(e) => izmijeniIgru(idx, 'igra_id', e.target.value)}>
+                      <option value="">— Izaberite igru —</option>
+                      {igre.map((i) => <option key={i.id} value={i.id}>{i.naziv}</option>)}
+                    </select>
+                    {izabranaIgra?.ima_pozicije && (
+                      <select style={{ flex: 1 }} value={red.pozicija_id} onChange={(e) => izmijeniIgru(idx, 'pozicija_id', e.target.value)}>
+                        <option value="">Pozicija —</option>
+                        {izabranaIgra.Pozicijas?.map((p) => <option key={p.id} value={p.id}>{p.naziv}</option>)}
+                      </select>
+                    )}
+                    {mojeIgre.length > 1 && (
+                      <button type="button" className="btn btn-sm btn-outline" onClick={() => ukloniIgru(idx)}>✕</button>
+                    )}
+                  </div>
+                );
+              })}
+              <button type="button" className="btn btn-sm btn-outline" onClick={dodajIgru}>+ Dodaj igru</button>
+            </div>
+            <div className="field">
+              <label>Bio</label>
+              <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)} />
+            </div>
+            <p className="muted" style={{ fontSize: 12 }}>Napomena: rank se više ne bira ručno — prikazuje se rank tvog TIMA, izračunat automatski iz odigranih mečeva.</p>
             <button className="btn" type="submit">Sačuvaj izmjene</button>
           </form>
         </div>

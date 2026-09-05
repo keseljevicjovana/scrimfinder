@@ -7,6 +7,7 @@ const Korisnik = sequelize.define('Korisnik', {
   lozinka_hash: { type: DataTypes.STRING(255), allowNull: false },
   pol: { type: DataTypes.ENUM('muski', 'zenski'), defaultValue: 'muski' },
   avatar: { type: DataTypes.JSON },
+  bio: { type: DataTypes.TEXT, allowNull: true },
   mora_promijeniti_lozinku: { type: DataTypes.BOOLEAN, defaultValue: true },
   uloga: { type: DataTypes.ENUM('igrac', 'admin'), defaultValue: 'igrac' },
 }, { tableName: 'korisnici', underscored: true });
@@ -22,7 +23,6 @@ const Pozicija = sequelize.define('Pozicija', {
 
 const ProfilIgraca = sequelize.define('ProfilIgraca', {
   rank: { type: DataTypes.ENUM('Bronze','Silver','Gold','Platinum','Diamond','Pro'), defaultValue: 'Bronze' },
-  bio: DataTypes.TEXT,
 }, { tableName: 'profili_igraca', underscored: true, timestamps: false });
 
 const Dostupnost = sequelize.define('Dostupnost', {
@@ -163,7 +163,7 @@ Igra.hasMany(Pozicija, { foreignKey: 'igra_id' });
 Pozicija.belongsTo(Igra, { foreignKey: 'igra_id' });
 
 // Korisnik <-> ProfilIgraca (1:1)
-Korisnik.hasOne(ProfilIgraca, { foreignKey: 'korisnik_id' });
+Korisnik.hasMany(ProfilIgraca, { foreignKey: 'korisnik_id', as: 'profiliIgraca' });
 ProfilIgraca.belongsTo(Korisnik, { foreignKey: 'korisnik_id' });
 ProfilIgraca.belongsTo(Igra, { foreignKey: 'igra_id' });
 ProfilIgraca.belongsTo(Pozicija, { foreignKey: 'pozicija_id' });
