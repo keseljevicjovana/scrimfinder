@@ -8,10 +8,13 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [lozinka, setLozinka] = useState('');
   const [greska, setGreska] = useState('');
+  const [ucitava, setUcitava] = useState(false);
 
   const posalji = async (e) => {
     e.preventDefault();
+    if (ucitava) return;
     setGreska('');
+    setUcitava(true);
     try {
       const ulogovaniKorisnik = await prijava(email, lozinka);
       if (ulogovaniKorisnik.mora_promijeniti_lozinku) {
@@ -21,6 +24,8 @@ export default function Login() {
       }
     } catch (err) {
       setGreska(err.response?.data?.poruka || 'Greška prilikom prijave.');
+    } finally {
+      setUcitava(false);
     }
   };
 
@@ -37,7 +42,9 @@ export default function Login() {
           <input type="password" value={lozinka} onChange={(e) => setLozinka(e.target.value)} required />
         </div>
         {greska && <p className="error-text">{greska}</p>}
-        <button className="btn" type="submit" style={{ width: '100%' }}>Prijavi se</button>
+        <button className="btn" type="submit" disabled={ucitava} style={{ width: '100%', opacity: ucitava ? 0.6 : 1 }}>
+          {ucitava ? 'Prijavljivanje...' : 'Prijavi se'}
+        </button>
         <p className="muted" style={{ marginTop: 12, fontSize: 12 }}>
           Prva prijava? Koristite jednokratnu lozinku poslatu na email.
         </p>

@@ -10,6 +10,7 @@ export default function Register() {
   const [podaci, setPodaci] = useState({ ime: '', email: '', pol: 'muski', igra_id: '', pozicija_id: '', bio: '' });
   const [greska, setGreska] = useState('');
   const [poslato, setPoslato] = useState(false);
+  const [ucitava, setUcitava] = useState(false);
 
   useEffect(() => { api.get('/igre').then((res) => setIgre(res.data)); }, []);
 
@@ -17,12 +18,16 @@ export default function Register() {
 
   const posalji = async (e) => {
     e.preventDefault();
+    if (ucitava) return; // spriječava duplo slanje ako korisnik klikne više puta dok se čeka odgovor
     setGreska('');
+    setUcitava(true);
     try {
       await registracija(podaci);
       setPoslato(true);
     } catch (err) {
       setGreska(err.response?.data?.poruka || 'Greška prilikom registracije.');
+    } finally {
+      setUcitava(false);
     }
   };
 
@@ -88,7 +93,9 @@ export default function Register() {
           Lozinku ne birate sami — jednokratna lozinka će biti poslata na vaš email nakon registracije.
         </p>
         {greska && <p className="error-text">{greska}</p>}
-        <button className="btn" type="submit" style={{ width: '100%' }}>Kreiraj nalog</button>
+        <button className="btn" type="submit" disabled={ucitava} style={{ width: '100%', opacity: ucitava ? 0.6 : 1 }}>
+          {ucitava ? 'Šalje se... (može potrajati do minut)' : 'Kreiraj nalog'}
+        </button>
         <p className="muted" style={{ marginTop: 12 }}>
           Već imate nalog? <Link to="/prijava">Prijavite se</Link>
         </p>
