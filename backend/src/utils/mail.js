@@ -1,14 +1,24 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
+// Render (i mnogi drugi besplatni hosting servisi) BLOKIRAJU odlazne SMTP konekcije
+// (port 587/465) da bi spriječili zloupotrebu za spam — zato SMTP često javlja
+// "Connection timeout" na hostingu, iako identična podešavanja rade lokalno.
+// Rješenje: ako je RESEND_API_KEY podešen, šaljemo mejl preko Resend-ovog HTTP API-ja
+// (obično HTTPS, port 443, koji NIKAD nije blokiran) umjesto preko SMTP-a.
+// Ako RESEND_API_KEY nije podešen, koristi se "stari" SMTP put (dobar za lokalni razvoj
+// sa Gmail-om, gdje SMTP obično radi bez problema).
+
+const koristiResendApi = !!process.env.RESEND_API_KEY;
+
+const transporter = koristiResendApi ? null : nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
   secure: Number(process.env.SMTP_PORT) === 465,
   auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
 });
 
-async function posaljiJednokratnuLozinku(email, ime, jednokratnaLozinka) {
-  const html = `
+function napraviHtml(ime, jednokratnaLozinka) {
+  return `
     <div style="font-family: Arial, sans-serif; background:#120a1f; color:#f1eaff; padding:24px;">
       <h2 style="color:#00f0ff;">Dobrodošli na ScrimFinder, ${ime}!</h2>
       <p>Vaš nalog je kreiran. Za prvu prijavu koristite jednokratnu lozinku ispod:</p>
@@ -20,16 +30,43 @@ async function posaljiJednokratnuLozinku(email, ime, jednokratnaLozinka) {
       <p style="color:#a693c9; font-size:12px; margin-top:24px;">Ako niste vi kreirali ovaj nalog, slobodno ignorišite ovaj email.</p>
     </div>
   `;
-  try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: email,
+}
+
+async function posaljiPrekoResendApi(email, ime, jednokratnaLozinka) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: process.env.SMTP_FROM || 'ScrimFinder <onboarding@resend.dev>',
+      to: [email],
       subject: 'ScrimFinder — vaša jednokratna lozinka',
-      html,
-    });
+      html: napraviHtml(ime, jednokratnaLozinka),
+    }),
+  });
+  if (!res.ok) {
+    const tekstGreske = await res.text();
+    throw new Error(`Resend API greška (${res.status}): ${tekstGreske}`);
+  }
+}
+
+async function posaljiJednokratnuLozinku(email, ime, jednokratnaLozinka) {
+  try {
+    if (koristiResendApi) {
+      await posaljiPrekoResendApi(email, ime, jednokratnaLozinka);
+    } else {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: email,
+        subject: 'ScrimFinder — vaša jednokratna lozinka',
+        html: napraviHtml(ime, jednokratnaLozinka),
+      });
+    }
   } catch (err) {
-    // Ne prekidamo registraciju ako email ne uspije da se pošalje (npr. u razvoju bez podešenog SMTP-a),
-    // ali obavezno logujemo grešku i, radi lakšeg testiranja, ispisujemo lozinku u konzolu.
+    // Ne prekidamo registraciju ako email ne uspije da se pošalje, ali obavezno logujemo
+    // grešku i, radi lakšeg testiranja, ispisujemo lozinku u konzolu.
     console.error('Slanje emaila nije uspjelo:', err.message);
     console.log(`[DEV] Jednokratna lozinka za ${email}: ${jednokratnaLozinka}`);
   }
