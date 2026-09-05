@@ -129,6 +129,21 @@ exports.ukloniClana = async (req, res) => {
   res.json({ poruka: 'Igrač je uklonjen iz tima.' });
 };
 
+// Bilo koji ČLAN (osim kapitena) može SAM napustiti tim — do sada je postojalo samo da kapiten
+// uklanja druge, ali niko nije mogao dobrovoljno da izađe iz tima.
+exports.napustiTim = async (req, res) => {
+  const tim = await Tim.findByPk(req.params.id);
+  if (!tim) return res.status(404).json({ poruka: 'Tim nije pronađen.' });
+  if (tim.kapiten_id === req.korisnik.id) {
+    return res.status(400).json({ poruka: 'Kapiten ne može napustiti tim — obratite se administratoru da tim bude obrisan ili premjestite kapitensku ulogu.' });
+  }
+  const clanstvo = await ClanTima.findOne({ where: { tim_id: tim.id, korisnik_id: req.korisnik.id } });
+  if (!clanstvo) return res.status(400).json({ poruka: 'Niste član ovog tima.' });
+  await clanstvo.destroy();
+  await ukloniIzTimskogChata(tim.id, req.korisnik.id);
+  res.json({ poruka: 'Napustili ste tim.' });
+};
+
 // ---- Pozivnice (kapiten -> igrac) ----
 exports.posaljiPozivnicu = async (req, res) => {
   const tim = await Tim.findByPk(req.params.id);
@@ -157,6 +172,29 @@ exports.odgovoriNaPozivnicu = async (req, res) => {
 };
 
 // ---- Aplikacije (igrac -> tim) ----
+// Pozivnice UPUĆENE meni (na moj korisnički nalog), status na čekanju — treba da ih negdje vidim da bih mogao/la odgovoriti.
+exports.mojePozivnice = async (req, res) => {
+  const pozivnice = await Pozivnica.findAll({
+    where: { pozvani_korisnik_id: req.korisnik.id, status: 'na_cekanju' },
+    include: [Tim],
+    order: [['created_at', 'DESC']],
+  });
+  res.json(pozivnice);
+};
+
+// Aplikacije PRISTIGLE za timove gdje sam JA kapiten, status na čekanju.
+exports.mojeAplikacije = async (req, res) => {
+  const mojiTimovi = await Tim.findAll({ where: { kapiten_id: req.korisnik.id } });
+  const timIds = mojiTimovi.map((t) => t.id);
+  if (timIds.length === 0) return res.json([]);
+  const aplikacije = await Aplikacija.findAll({
+    where: { tim_id: timIds, status: 'na_cekanju' },
+    include: [Tim, { model: Korisnik, attributes: ['id', 'ime', 'avatar', 'pol'] }],
+    order: [['created_at', 'DESC']],
+  });
+  res.json(aplikacije);
+};
+
 exports.posaljiAplikaciju = async (req, res) => {
   const tim = await Tim.findByPk(req.params.id);
   if (!tim) return res.status(404).json({ poruka: 'Tim nije pronađen.' });

@@ -3,19 +3,36 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import RankBadge from '../components/RankBadge';
 import GrbSvg from '../components/GrbSvg';
+import AvatarSvg from '../avatar/AvatarSvg';
 
 export default function MojiTimovi() {
   const navigate = useNavigate();
   const [timovi, setTimovi] = useState(null);
+  const [pozivnice, setPozivnice] = useState([]);
+  const [aplikacije, setAplikacije] = useState([]);
   const [igre, setIgre] = useState([]);
   const [podaci, setPodaci] = useState({ naziv: '', igra_id: '', opis: '', logo_url: '' });
   const [greska, setGreska] = useState('');
 
-  const ucitaj = () => api.get('/timovi/moji/lista').then((res) => setTimovi(res.data));
+  const ucitaj = () => {
+    api.get('/timovi/moji/lista').then((res) => setTimovi(res.data));
+    api.get('/timovi/pozivnice/moje').then((res) => setPozivnice(res.data));
+    api.get('/timovi/aplikacije/moje').then((res) => setAplikacije(res.data));
+  };
   useEffect(() => {
     ucitaj();
     api.get('/igre').then((res) => setIgre(res.data));
   }, []);
+
+  const odgovoriNaPozivnicu = async (id, odgovor) => {
+    await api.put(`/timovi/pozivnice/${id}`, { odgovor });
+    ucitaj();
+  };
+
+  const odgovoriNaAplikaciju = async (id, odgovor) => {
+    await api.put(`/timovi/aplikacije/${id}`, { odgovor });
+    ucitaj();
+  };
 
   const napraviTim = async (e) => {
     e.preventDefault();
@@ -31,6 +48,48 @@ export default function MojiTimovi() {
   return (
     <div className="container fade-in" style={{ marginTop: 30, marginBottom: 40 }}>
       <h1>Moji timovi</h1>
+
+      {(pozivnice.length > 0 || aplikacije.length > 0) && (
+        <div className="section-heading"><div className="bar" /><h2>Zahtjevi koji čekaju tvoj odgovor</h2></div>
+      )}
+
+      {pozivnice.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Pozivnice koje si primio/la</h3>
+          {pozivnice.map((p) => (
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <span>Pozvan/a si u tim <Link to={`/tim/${p.Tim?.id}`}><strong>{p.Tim?.naziv}</strong></Link></span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-sm" onClick={() => odgovoriNaPozivnicu(p.id, 'prihvacena')}>Prihvati</button>
+                <button className="btn btn-sm btn-outline" onClick={() => odgovoriNaPozivnicu(p.id, 'odbijena')}>Odbij</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {aplikacije.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Aplikacije za tvoje timove</h3>
+          {aplikacije.map((a) => (
+            <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AvatarSvg avatar={a.Korisnik?.avatar} pol={a.Korisnik?.pol} size={30} glow={false} />
+                <span>
+                  <Link to={`/igrac/${a.Korisnik?.id}`}><strong>{a.Korisnik?.ime}</strong></Link> želi da se pridruži timu <strong>{a.Tim?.naziv}</strong>
+                  {a.poruka && <p className="muted" style={{ margin: '2px 0 0', fontSize: 12 }}>"{a.poruka}"</p>}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-sm" onClick={() => odgovoriNaAplikaciju(a.id, 'prihvacena')}>Prihvati</button>
+                <button className="btn btn-sm btn-outline" onClick={() => odgovoriNaAplikaciju(a.id, 'odbijena')}>Odbij</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="section-heading"><div className="bar" /><h2>Tvoji timovi</h2></div>
       <p className="muted">Timovi gdje si kapiten idu prvi; ostali su poređani od najaktivnijeg ka najmanje aktivnom.</p>
 
       {timovi === null && <p className="muted">Učitavanje...</p>}

@@ -6,6 +6,10 @@ import api from '../api/axios';
 // vodi TAČNO tamo gdje treba da se reaguje (na meč, tim, konverzaciju...), ne samo da je
 // "označi kao pročitano" kao ranije — to je razlog zašto notifikacije uopšte postoje.
 function putanjaZaNotifikaciju(n) {
+  // Neke notifikacije imaju posebnu, akcionu destinaciju (gdje STVARNO postoji dugme za odgovor),
+  // različitu od generičkog linka ka entitetu — provjeravamo tip notifikacije prvo.
+  if (n.tip === 'pozivnica_u_tim') return '/moji-timovi';
+
   if (!n.link_entitet_tip || !n.link_entitet_id) return null;
   switch (n.link_entitet_tip) {
     case 'tim': return `/tim/${n.link_entitet_id}`;

@@ -23,6 +23,7 @@ export default function TeamProfile() {
 
   if (!tim) return <div className="container"><p className="muted">Učitavanje...</p></div>;
   const jeKapiten = korisnik && tim.kapiten?.id === korisnik.id;
+  const jeClan = korisnik && !jeKapiten && tim.clanovi?.some((c) => c.Korisnik?.id === korisnik.id);
 
   const posaljiPozivnicu = async (e) => {
     e.preventDefault();
@@ -35,6 +36,16 @@ export default function TeamProfile() {
   const apliciraj = async () => {
     await api.post(`/timovi/${id}/aplikacije`, { poruka: 'Želim da se pridružim timu.' });
     alert('Aplikacija je poslata kapitenu.');
+  };
+
+  const napustiTim = async () => {
+    if (!confirm('Sigurno želiš da napustiš ovaj tim?')) return;
+    try {
+      await api.post(`/timovi/${id}/napusti`);
+      ucitaj();
+    } catch (err) {
+      alert(err.response?.data?.poruka || 'Greška prilikom napuštanja tima.');
+    }
   };
 
   const ukloniClana = async (korisnikId) => {
@@ -104,9 +115,16 @@ export default function TeamProfile() {
         </div>
       )}
 
-      {korisnik && !jeKapiten && (
+      {korisnik && !jeKapiten && !jeClan && (
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           <button className="btn" onClick={apliciraj}>Prijavi se za tim</button>
+          <button className="btn btn-outline" onClick={prijaviTim}>Prijavi kapitena</button>
+        </div>
+      )}
+
+      {jeClan && (
+        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          <button className="btn btn-danger" onClick={napustiTim}>Napusti tim</button>
           <button className="btn btn-outline" onClick={prijaviTim}>Prijavi kapitena</button>
         </div>
       )}
