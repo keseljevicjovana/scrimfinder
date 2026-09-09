@@ -1,9 +1,14 @@
+const https = require('https');
 const nodemailer = require('nodemailer');
 
 // Render (i mnogi drugi besplatni hosting servisi) BLOKIRAJU odlazne SMTP konekcije
 // (port 587/465) da bi spriječili zloupotrebu za spam — zato SMTP često javlja
 // "Connection timeout" na hostingu, iako identična podešavanja rade lokalno.
 // Rješenje: šaljemo mejl preko HTTP API-ja nekog servisa (HTTPS, port 443, nikad blokiran).
+//
+// VAŽNO: koristimo Node-ov UGRAĐENI 'https' modul (radi na SVAKOJ verziji Node-a), umjesto
+// globalne 'fetch' funkcije — 'fetch' postoji tek od Node 18 nadalje, i ako hosting koristi
+// stariju verziju, 'fetch' bi bio nedefinisan i slanje bi tiho propadalo bez jasnog razloga.
 //
 // Podržana dva provajdera, biraju se automatski prema tome koji je API ključ podešen:
 //  - BREVO_API_KEY  -> Brevo (300 mejlova/dan besplatno, šalje na BILO KOG primaoca,
@@ -21,6 +26,29 @@ const transporter = (koristiBrevoApi || koristiResendApi) ? null : nodemailer.cr
   secure: Number(process.env.SMTP_PORT) === 465,
   auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
 });
+
+// Generički POST zahtjev preko Node-ovog ugrađenog 'https' modula — vraća Promise,
+// baca grešku ako status kod nije 2xx (isto ponašanje kao provjera 'res.ok' kod fetch-a).
+function httpsPostJson(url, headers, tijelo) {
+  return new Promise((resolve, reject) => {
+    const podaci = JSON.stringify(tijelo);
+    const opcije = {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(podaci) },
+    };
+    const req = https.request(url, opcije, (res) => {
+      let telo = '';
+      res.on('data', (chunk) => { telo += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve(telo);
+        else reject(new Error(`HTTP ${res.statusCode}: ${telo}`));
+      });
+    });
+    req.on('error', reject);
+    req.write(podaci);
+    req.end();
+  });
+}
 
 function napraviHtml(ime, jednokratnaLozinka) {
   return `
@@ -48,52 +76,39 @@ function rastaviPosiljaoca() {
 
 async function posaljiPrekoBrevoApi(email, ime, jednokratnaLozinka) {
   const posiljalac = rastaviPosiljaoca();
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'api-key': process.env.BREVO_API_KEY,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
+  await httpsPostJson(
+    'https://api.brevo.com/v3/smtp/email',
+    { 'api-key': process.env.BREVO_API_KEY, Accept: 'application/json' },
+    {
       sender: posiljalac,
       to: [{ email, name: ime }],
       subject: 'ScrimFinder — vaša jednokratna lozinka',
       htmlContent: napraviHtml(ime, jednokratnaLozinka),
-    }),
-  });
-  if (!res.ok) {
-    const tekstGreske = await res.text();
-    throw new Error(`Brevo API greška (${res.status}): ${tekstGreske}`);
-  }
+    },
+  );
 }
 
 async function posaljiPrekoResendApi(email, ime, jednokratnaLozinka) {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  await httpsPostJson(
+    'https://api.resend.com/emails',
+    { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+    {
       from: process.env.SMTP_FROM || 'ScrimFinder <onboarding@resend.dev>',
       to: [email],
       subject: 'ScrimFinder — vaša jednokratna lozinka',
       html: napraviHtml(ime, jednokratnaLozinka),
-    }),
-  });
-  if (!res.ok) {
-    const tekstGreske = await res.text();
-    throw new Error(`Resend API greška (${res.status}): ${tekstGreske}`);
-  }
+    },
+  );
 }
 
 async function posaljiJednokratnuLozinku(email, ime, jednokratnaLozinka) {
   try {
     if (koristiBrevoApi) {
       await posaljiPrekoBrevoApi(email, ime, jednokratnaLozinka);
+      console.log(`Email uspješno poslat preko Brevo API-ja na ${email}.`);
     } else if (koristiResendApi) {
       await posaljiPrekoResendApi(email, ime, jednokratnaLozinka);
+      console.log(`Email uspješno poslat preko Resend API-ja na ${email}.`);
     } else {
       await transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -101,6 +116,7 @@ async function posaljiJednokratnuLozinku(email, ime, jednokratnaLozinka) {
         subject: 'ScrimFinder — vaša jednokratna lozinka',
         html: napraviHtml(ime, jednokratnaLozinka),
       });
+      console.log(`Email uspješno poslat preko SMTP-a na ${email}.`);
     }
   } catch (err) {
     // Ne prekidamo registraciju ako email ne uspije da se pošalje, ali obavezno logujemo
