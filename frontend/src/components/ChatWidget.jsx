@@ -25,6 +25,7 @@ export default function ChatWidget() {
   const [tekst, setTekst] = useState('');
   const [pretraga, setPretraga] = useState('');
   const poljeRef = useRef(null);
+  const slikaRef = useRef(null);
 
   const ucitajListu = () => {
     api.get('/chat/konverzacije').then((res) => setPodaci(res.data)).catch(() => {});
@@ -73,7 +74,6 @@ export default function ChatWidget() {
 
   // Slanje slike — BIRA se iz galerije/fajlova (input type="file" bez "capture" atributa
   // ne otvara kameru direktno, nego standardni birač fajlova/galerije uređaja).
-  const slikaRef = useRef(null);
   const posaljiSliku = async (e) => {
     const fajl = e.target.files?.[0];
     e.target.value = ''; // da isti fajl može ponovo da se izabere kasnije
