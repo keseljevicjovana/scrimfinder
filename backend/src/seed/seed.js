@@ -325,6 +325,14 @@ async function seed() {
   // ISTORIJA MEČEVA — bogata, za SVE timove, plus budući zakazani mečevi (kalendar)
   // ============================================================
   console.log('Generišem istoriju mečeva (ovo je najduži korak)...');
+  // Provjera da dva tima NEMAJU zajedničkog člana prije zakazivanja meča između njih —
+  // "izlog" igrači su naknadno dodati u DVA dodatna tima iste igre, pa teoretski mogu
+  // da završe u timovima koji bi inače bili upareni; ovo sprečava sudar (UNIQUE greška).
+  function timoviSeSudaraju(timA, timB) {
+    const clanoviA = clanoviMap.get(timA) || [];
+    const clanoviB = clanoviMap.get(timB) || [];
+    return clanoviA.some((a) => clanoviB.some((b) => b.id === a.id));
+  }
   const obradjeniParovi = new Set();
   let ukupnoMeceva = 0;
   let ukupnoBuducih = 0;
@@ -339,6 +347,7 @@ async function seed() {
         if (odabrano >= brojProtivnika) break;
         const kljuc = [timA.id, timB.id].sort((a, b) => a - b).join('-');
         if (obradjeniParovi.has(kljuc)) continue;
+        if (timoviSeSudaraju(timA, timB)) continue; // preskoči par koji dijeli zajedničkog člana
         obradjeniParovi.add(kljuc);
         odabrano++;
 
@@ -363,7 +372,10 @@ async function seed() {
   for (const igra of [cs2, valorant, lol]) {
     const timoviIgre = timoviPoIgri.get(igra.id);
     if (timoviIgre.length < 2) continue;
-    const [timA, timB] = izmijesaj(timoviIgre).slice(0, 2);
+    const parIzmijesan = izmijesaj(timoviIgre);
+    let timA = parIzmijesan[0];
+    let timB = parIzmijesan.find((t) => t.id !== timA.id && !timoviSeSudaraju(timA, t));
+    if (!timB) continue; // (izuzetno malo vjerovatno) nema nesukobljenog para za ovu igru
     const zahtjev = await ScrimZahtjev.create({
       tim_posiljalac_id: timA.id, tim_primalac_id: timB.id,
       predlozeni_termin: danaUnazad(nasumicniBroj(1, 4)), broj_mapa: 3, pravila: 'Best of 3.', status: 'prihvacen',
