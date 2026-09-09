@@ -24,6 +24,25 @@ exports.dohvatiTurnir = async (req, res) => {
   res.json(turnir);
 };
 
+// Posebna rang lista SAMO za timove prijavljene na OVAJ turnir — rangirano po broju
+// pobjeda unutar bracketa ovog turnira (koliko su daleko odmakli), ne po ukupnom rangu tima.
+exports.rangiranjeTurnira = async (req, res) => {
+  const prijave = await TurnirPrijava.findAll({ where: { turnir_id: req.params.id }, include: [Tim] });
+  const mecevi = await ScrimMec.findAll({ where: { turnir_id: req.params.id, status: 'odigran' } });
+
+  const rezultat = prijave.map((p) => {
+    const tim = p.Tim;
+    const mecoviTima = mecevi.filter((m) => m.tim1_id === tim.id || m.tim2_id === tim.id);
+    const pobjeda = mecoviTima.filter((m) => m.pobjednik_tim_id === tim.id).length;
+    const poraza = mecoviTima.length - pobjeda;
+    const eliminisan = poraza > 0; // single elimination — jedan poraz = ispadanje
+    return { tim: { id: tim.id, naziv: tim.naziv, grb: tim.grb }, pobjeda, poraza, odigranihUTurniru: mecoviTima.length, eliminisan };
+  });
+
+  rezultat.sort((a, b) => b.pobjeda - a.pobjeda || (a.eliminisan - b.eliminisan));
+  res.json(rezultat);
+};
+
 exports.prijaviTim = async (req, res) => {
   const { tim_id } = req.body;
   const turnir = await Turnir.findByPk(req.params.id);
@@ -126,9 +145,15 @@ exports.unesiRezultatBracketa = async (req, res) => {
   if (!slot) return res.status(404).json({ poruka: 'Meč u bracketu nije pronađen.' });
   if (!slot.tim1_id || !slot.tim2_id) return res.status(400).json({ poruka: 'Oba tima moraju biti poznata prije unosa rezultata.' });
 
+  const jeFinale = !slot.sledeci_slot_id; // finale = slot koji više nikuda ne vodi dalje
+  const BONUS_SAMPION = 15;
+  // VAŽNO: mora se postaviti i 'ishod' (ne samo 'pobjednik_tim_id'), inače se turnirski mečevi
+  // NE bi ispravno računali u poenima/rangu tima — sistem poena čita isključivo 'ishod' polje.
+  const ishod = pobjednik_tim_id === slot.tim1_id ? 'tim1' : 'tim2';
   const mec = await ScrimMec.create({
     tim1_id: slot.tim1_id, tim2_id: slot.tim2_id, turnir_id: slot.turnir_id,
-    runda_broj: slot.runda_broj, zakazano_za: new Date(), pobjednik_tim_id, rezultat, status: 'odigran',
+    runda_broj: slot.runda_broj, zakazano_za: new Date(), pobjednik_tim_id, ishod, rezultat, status: 'odigran',
+    bonus_poena: jeFinale ? BONUS_SAMPION : 0,
   });
   await slot.update({ mec_id: mec.id });
 
@@ -138,16 +163,21 @@ exports.unesiRezultatBracketa = async (req, res) => {
     if (jeParan) await sledeciSlot.update({ tim1_id: pobjednik_tim_id });
     else await sledeciSlot.update({ tim2_id: pobjednik_tim_id });
   } else {
-    // finale odigrano -> turnir zavrsen, dostignuce pobjednicima
+    // finale odigrano -> turnir zavrsen, dostignuce + bonus poeni + notifikacija pobjednicima
     const turnir = await Turnir.findByPk(slot.turnir_id);
     await turnir.update({ status: 'zavrsen' });
     const pobjednickiClanovi = await ClanTima.findAll({ where: { tim_id: pobjednik_tim_id } });
     const dostignuce = await Dostignuce.findOne({ where: { uslov_tip: 'osvojen_turnir' } });
-    if (dostignuce) {
-      for (const clan of pobjednickiClanovi) {
+    for (const clan of pobjednickiClanovi) {
+      if (dostignuce) {
         const [, kreirano] = await KorisnikDostignuce.findOrCreate({ where: { korisnik_id: clan.korisnik_id, dostignuce_id: dostignuce.id } });
         if (kreirano) await posaljiNotifikaciju(clan.korisnik_id, 'novo_dostignuce', `Osvojili ste dostignuće: ${dostignuce.naziv}`);
       }
+      await posaljiNotifikaciju(
+        clan.korisnik_id, 'turnir_pocinje',
+        `Čestitamo! Vaš tim je osvojio turnir "${turnir.naziv}" i dobija ${BONUS_SAMPION} bonus poena na rang listi.`,
+        'tim', pobjednik_tim_id,
+      );
     }
   }
 

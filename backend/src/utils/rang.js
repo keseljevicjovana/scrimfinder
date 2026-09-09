@@ -56,6 +56,7 @@ function izracunajTimskuStatistiku(mecevi, timId) {
         poeni += 3;
         niz += 1;
         poeni += streakBonus(niz);
+        poeni += m.bonus_poena || 0; // npr. šampionski bonus za osvojen turnir
         pobjeda += 1;
       } else {
         niz = 0;

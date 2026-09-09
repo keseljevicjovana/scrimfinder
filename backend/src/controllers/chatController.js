@@ -51,8 +51,8 @@ exports.mojeKonverzacije = async (req, res) => {
 
 // Šalje direktnu poruku korisniku (pravi konverzaciju ako ne postoji).
 exports.posaljiDirektnu = async (req, res) => {
-  const { primalac_id, tekst } = req.body;
-  if (!tekst || !tekst.trim()) return res.status(400).json({ poruka: 'Poruka ne može biti prazna.' });
+  const { primalac_id, tekst, slika } = req.body;
+  if ((!tekst || !tekst.trim()) && !slika) return res.status(400).json({ poruka: 'Poruka ne može biti prazna.' });
   if (Number(primalac_id) === req.korisnik.id) return res.status(400).json({ poruka: 'Ne možete pisati sami sebi.' });
 
   // Nađi postojeću direktnu konverzaciju između ova dva korisnika
@@ -73,7 +73,7 @@ exports.posaljiDirektnu = async (req, res) => {
     await posaljiNotifikaciju(primalac_id, 'poruka_zahtjev', `${req.korisnik.ime} vam je poslao/la zahtjev za poruku.`, 'konverzacija', konverzacija.id);
   }
 
-  const poruka = await Poruka.create({ konverzacija_id: konverzacija.id, posiljalac_id: req.korisnik.id, tekst });
+  const poruka = await Poruka.create({ konverzacija_id: konverzacija.id, posiljalac_id: req.korisnik.id, tekst: tekst || null, slika: slika || null });
   await ClanKonverzacije.update({ poslednje_procitano_at: new Date() }, { where: { konverzacija_id: konverzacija.id, korisnik_id: req.korisnik.id } });
   res.status(201).json({ konverzacija_id: konverzacija.id, poruka });
 };
@@ -111,12 +111,12 @@ exports.dohvatiPoruke = async (req, res) => {
 
 // Slanje poruke u postojeću konverzaciju (timski chat ili već prihvaćena direktna)
 exports.posaljiUKonverzaciju = async (req, res) => {
-  const { tekst } = req.body;
-  if (!tekst || !tekst.trim()) return res.status(400).json({ poruka: 'Poruka ne može biti prazna.' });
+  const { tekst, slika } = req.body;
+  if ((!tekst || !tekst.trim()) && !slika) return res.status(400).json({ poruka: 'Poruka ne može biti prazna.' });
   const clanstvo = await ClanKonverzacije.findOne({ where: { konverzacija_id: req.params.id, korisnik_id: req.korisnik.id } });
   if (!clanstvo || clanstvo.status === 'odbijena') return res.status(403).json({ poruka: 'Nemate pristup ovoj konverzaciji.' });
 
-  const poruka = await Poruka.create({ konverzacija_id: req.params.id, posiljalac_id: req.korisnik.id, tekst });
+  const poruka = await Poruka.create({ konverzacija_id: req.params.id, posiljalac_id: req.korisnik.id, tekst: tekst || null, slika: slika || null });
   clanstvo.poslednje_procitano_at = new Date();
   await clanstvo.save();
 

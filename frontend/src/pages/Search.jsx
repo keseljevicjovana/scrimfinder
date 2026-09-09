@@ -16,9 +16,15 @@ export default function Search() {
 
   useEffect(() => { api.get('/igre').then((res) => setIgre(res.data)); }, []);
 
+  // Prilikom prvog otvaranja stranice, prikaži podrazumijevanu listu (svi timovi/igrači) —
+  // da stranica ne bude prazna dok korisnik nešto ne ukuca.
+  useEffect(() => {
+    api.get('/timovi/pretraga/brza').then((res) => setBrziRezultati(res.data));
+  }, []);
+
   // Uživo pretraga — čim korisnik ukuca (uz malu pauzu od 300ms da ne šaljemo zahtjev na svaki taster).
   useEffect(() => {
-    if (!q.trim()) { setBrziRezultati(null); return; }
+    if (!q.trim()) return; // prazno polje — ostaje prikazana podrazumijevana lista iz efekta iznad
     const t = setTimeout(() => {
       api.get(`/timovi/pretraga/brza?q=${encodeURIComponent(q)}`).then((res) => setBrziRezultati(res.data));
     }, 300);
@@ -51,6 +57,7 @@ export default function Search() {
             <div className="grid grid-2">
               <div>
                 <h3>Timovi</h3>
+                {!q.trim() && brziRezultati.timovi.length > 0 && <p className="muted" style={{ fontSize: 12, marginTop: -8 }}>Najnoviji timovi na platformi.</p>}
                 {brziRezultati.timovi.length === 0 && <p className="muted">Nema rezultata.</p>}
                 {brziRezultati.timovi.map((t) => (
                   <Link key={t.id} to={`/tim/${t.id}`} className="card" style={{ display: 'block', marginBottom: 10 }}>
@@ -60,6 +67,7 @@ export default function Search() {
               </div>
               <div>
                 <h3>Igrači</h3>
+                {!q.trim() && brziRezultati.igraci.length > 0 && <p className="muted" style={{ fontSize: 12, marginTop: -8 }}>Najnoviji registrovani igrači.</p>}
                 {brziRezultati.igraci.length === 0 && <p className="muted">Nema rezultata.</p>}
                 {brziRezultati.igraci.map((i) => (
                   <Link key={i.id} to={`/igrac/${i.id}`} className="card" style={{ display: 'block', marginBottom: 10 }}>

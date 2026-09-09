@@ -75,6 +75,7 @@ const ScrimMec = sequelize.define('ScrimMec', {
   glas_tim2: { type: DataTypes.ENUM('pobjeda', 'poraz', 'nerijeseno'), allowNull: true },
   rezultat: DataTypes.STRING(20),
   status: { type: DataTypes.ENUM('zakazan', 'odigran', 'otkazan', 'sporno'), defaultValue: 'zakazan' },
+  bonus_poena: { type: DataTypes.INTEGER, defaultValue: 0 }, // dodatni poeni za rang — koristi se za finale turnira (šampionski bonus)
 }, { tableName: 'scrim_mecevi', underscored: true, createdAt: 'created_at', updatedAt: false });
 
 const MecStatistika = sequelize.define('MecStatistika', {
@@ -121,7 +122,8 @@ const ClanKonverzacije = sequelize.define('ClanKonverzacije', {
 }, { tableName: 'clanovi_konverzacije', underscored: true, createdAt: 'created_at', updatedAt: false });
 
 const Poruka = sequelize.define('Poruka', {
-  tekst: { type: DataTypes.TEXT, allowNull: false },
+  tekst: { type: DataTypes.TEXT, allowNull: true },
+  slika: { type: DataTypes.TEXT('long'), allowNull: true }, // base64 data-URL slike (npr. screenshot kao dokaz spora) — poruka mora imati tekst ILI sliku (provjerava se u kontroleru)
 }, { tableName: 'poruke', underscored: true, createdAt: 'created_at', updatedAt: false });
 
 const PrijavaSadrzaja = sequelize.define('PrijavaSadrzaja', {
@@ -159,7 +161,7 @@ const Notifikacija = sequelize.define('Notifikacija', {
 // ---------------- RELACIJE ----------------
 
 // Igra <-> Pozicija
-Igra.hasMany(Pozicija, { foreignKey: 'igra_id' });
+Igra.hasMany(Pozicija, { foreignKey: 'igra_id', as: 'Pozicijas' });
 Pozicija.belongsTo(Igra, { foreignKey: 'igra_id' });
 
 // Korisnik <-> ProfilIgraca (1:1)

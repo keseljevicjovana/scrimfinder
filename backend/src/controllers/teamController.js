@@ -227,12 +227,17 @@ exports.odgovoriNaAplikaciju = async (req, res) => {
 // ---- Pretraga ----
 exports.brzaPretraga = async (req, res) => {
   const { q } = req.query;
-  if (!q) return res.json({ timovi: [], igraci: [] });
-  const timovi = await Tim.findAll({ where: { naziv: { [Op.like]: `%${q}%` } }, include: [Igra], limit: 10 });
+  // Bez upita (npr. prvi ulazak na stranicu Pretraga) — vrati podrazumijevanu listu umjesto
+  // praznog ekrana, da stranica odmah izgleda "živo" i popunjeno.
+  const timoviWhere = q ? { naziv: { [Op.like]: `%${q}%` } } : {};
+  const igraciWhere = q ? { ime: { [Op.like]: `%${q}%` } } : {};
+  const limit = q ? 10 : 24;
+
+  const timovi = await Tim.findAll({ where: timoviWhere, include: [Igra], limit, order: q ? undefined : [['created_at', 'DESC']] });
   const igraci = await Korisnik.findAll({
-    where: { ime: { [Op.like]: `%${q}%` } },
+    where: { ...igraciWhere, uloga: 'igrac' },
     attributes: ['id', 'ime', 'avatar', 'pol'],
-    limit: 10,
+    limit, order: q ? undefined : [['created_at', 'DESC']],
   });
   res.json({ timovi, igraci });
 };

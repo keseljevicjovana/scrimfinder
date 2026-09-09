@@ -1,7 +1,7 @@
 const { Igra, Pozicija } = require('../models');
 
 exports.listaIgara = async (req, res) => {
-  const igre = await Igra.findAll({ include: [Pozicija] });
+  const igre = await Igra.findAll({ include: [{ model: Pozicija, as: 'Pozicijas' }] });
   res.json(igre);
 };
 
@@ -11,6 +11,6 @@ exports.napraviIgru = async (req, res) => {
   if (Array.isArray(pozicije)) {
     await Promise.all(pozicije.map((p) => Pozicija.create({ igra_id: igra.id, naziv: p })));
   }
-  const rezultat = await Igra.findByPk(igra.id, { include: [Pozicija] });
+  const rezultat = await Igra.findByPk(igra.id, { include: [{ model: Pozicija, as: 'Pozicijas' }] });
   res.status(201).json(rezultat);
 };

@@ -22,8 +22,8 @@ export default function MyProfile() {
   const [lozinkaPoruka, setLozinkaPoruka] = useState('');
   const [lozinkaGreska, setLozinkaGreska] = useState('');
 
-  // Dostupnost — svaki dan ima checkbox (aktivan/neaktivan) + od/do vrijeme.
-  const [dostupnost, setDostupnost] = useState(DANI.map((_, i) => ({ dan_u_sedmici: i, aktivno: false, vrijeme_od: '19:00', vrijeme_do: '23:00' })));
+  // Dostupnost — svaki dan može imati VIŠE odvojenih perioda (npr. prijepodne i uveče istog dana).
+  const [dostupnost, setDostupnost] = useState([]);
   const [dostupnostPoruka, setDostupnostPoruka] = useState('');
 
   useEffect(() => {
@@ -36,14 +36,7 @@ export default function MyProfile() {
     });
     api.get(`/korisnici/${korisnik.id}`).then((res) => {
       const postojeca = res.data.dostupnost || [];
-      if (postojeca.length > 0) {
-        setDostupnost(DANI.map((_, i) => {
-          const postoji = postojeca.find((d) => d.dan_u_sedmici === i);
-          return postoji
-            ? { dan_u_sedmici: i, aktivno: true, vrijeme_od: postoji.vrijeme_od.slice(0, 5), vrijeme_do: postoji.vrijeme_do.slice(0, 5) }
-            : { dan_u_sedmici: i, aktivno: false, vrijeme_od: '19:00', vrijeme_do: '23:00' };
-        }));
-      }
+      setDostupnost(postojeca.map((d) => ({ dan_u_sedmici: d.dan_u_sedmici, vrijeme_od: d.vrijeme_od.slice(0, 5), vrijeme_do: d.vrijeme_do.slice(0, 5) })));
     });
   }, [korisnik.id, korisnik.uloga]);
 
@@ -77,13 +70,15 @@ export default function MyProfile() {
   const dodajIgru = () => setMojeIgre((niz) => [...niz, { igra_id: '', pozicija_id: '' }]);
   const ukloniIgru = (idx) => setMojeIgre((niz) => niz.filter((_, i) => i !== idx));
 
-  const izmijeniDan = (i, polje, vrijednost) => {
-    setDostupnost((d) => d.map((x, idx) => (idx === i ? { ...x, [polje]: vrijednost } : x)));
+  const izmijeniPeriod = (idx, polje, vrijednost) => {
+    setDostupnost((niz) => niz.map((p, i) => (i === idx ? { ...p, [polje]: vrijednost } : p)));
   };
+  const dodajPeriod = (dan) => setDostupnost((niz) => [...niz, { dan_u_sedmici: dan, vrijeme_od: '19:00', vrijeme_do: '23:00' }]);
+  const ukloniPeriod = (idx) => setDostupnost((niz) => niz.filter((_, i) => i !== idx));
 
   const sacuvajDostupnost = async () => {
-    const termini = dostupnost.filter((d) => d.aktivno).map((d) => ({
-      dan_u_sedmici: d.dan_u_sedmici, vrijeme_od: `${d.vrijeme_od}:00`, vrijeme_do: `${d.vrijeme_do}:00`,
+    const termini = dostupnost.map((p) => ({
+      dan_u_sedmici: p.dan_u_sedmici, vrijeme_od: `${p.vrijeme_od}:00`, vrijeme_do: `${p.vrijeme_do}:00`,
     }));
     await api.put('/korisnici/dostupnost', { termini });
     setDostupnostPoruka('Dostupnost je sačuvana.');
@@ -208,22 +203,27 @@ export default function MyProfile() {
 
       <div className="card" style={{ marginTop: 20 }}>
         <h3>Dostupnost</h3>
-        <p className="muted" style={{ marginTop: -6 }}>Označi dane kada si obično dostupan/na za skrimove — koristi se u detaljnoj pretrazi timova.</p>
-        {dostupnost.map((d, i) => (
-          <div key={i} className="dan-red">
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 0 }}>
-              <input type="checkbox" style={{ width: 'auto' }} checked={d.aktivno} onChange={(e) => izmijeniDan(i, 'aktivno', e.target.checked)} />
-              <span className="dan-naziv">{DANI[i]}</span>
-            </label>
-            {d.aktivno && (
-              <>
-                <input type="time" style={{ width: 110 }} value={d.vrijeme_od} onChange={(e) => izmijeniDan(i, 'vrijeme_od', e.target.value)} />
-                <span className="muted">—</span>
-                <input type="time" style={{ width: 110 }} value={d.vrijeme_do} onChange={(e) => izmijeniDan(i, 'vrijeme_do', e.target.value)} />
-              </>
-            )}
-          </div>
-        ))}
+        <p className="muted" style={{ marginTop: -6 }}>Možeš dodati više odvojenih perioda istog dana (npr. prijepodne i uveče).</p>
+        {DANI.map((naziv, dan) => {
+          const periodiTogDana = dostupnost.map((p, idx) => ({ ...p, _idx: idx })).filter((p) => p.dan_u_sedmici === dan);
+          return (
+            <div key={dan} style={{ padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="dan-naziv" style={{ fontWeight: 600 }}>{naziv}</span>
+                <button type="button" className="btn btn-sm btn-outline" onClick={() => dodajPeriod(dan)}>+ Dodaj period</button>
+              </div>
+              {periodiTogDana.length === 0 && <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>Nije dostupan/na ovog dana.</p>}
+              {periodiTogDana.map((p) => (
+                <div key={p._idx} className="dan-red" style={{ marginTop: 6 }}>
+                  <input type="time" style={{ width: 110 }} value={p.vrijeme_od} onChange={(e) => izmijeniPeriod(p._idx, 'vrijeme_od', e.target.value)} />
+                  <span className="muted">—</span>
+                  <input type="time" style={{ width: 110 }} value={p.vrijeme_do} onChange={(e) => izmijeniPeriod(p._idx, 'vrijeme_do', e.target.value)} />
+                  <button type="button" className="btn btn-sm btn-outline" onClick={() => ukloniPeriod(p._idx)}>✕</button>
+                </div>
+              ))}
+            </div>
+          );
+        })}
         <button className="btn btn-sm" style={{ marginTop: 14 }} onClick={sacuvajDostupnost}>Sačuvaj dostupnost</button>
         {dostupnostPoruka && <span className="muted" style={{ color: 'var(--neon-green)', marginLeft: 10 }}>{dostupnostPoruka}</span>}
       </div>

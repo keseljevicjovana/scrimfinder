@@ -9,10 +9,14 @@ export default function TournamentDetail() {
   const { korisnik } = useAuth();
   const { toast, izborDialog, promptDialog } = useToast();
   const [turnir, setTurnir] = useState(null);
+  const [rangTurnira, setRangTurnira] = useState([]);
   const [mojiTimovi, setMojiTimovi] = useState([]);
   const [timId, setTimId] = useState('');
 
-  const ucitaj = () => api.get(`/turniri/${id}`).then((res) => setTurnir(res.data));
+  const ucitaj = () => {
+    api.get(`/turniri/${id}`).then((res) => setTurnir(res.data));
+    api.get(`/turniri/${id}/rangiranje`).then((res) => setRangTurnira(res.data));
+  };
   useEffect(() => { ucitaj(); }, [id]);
   useEffect(() => {
     if (!korisnik) return;
@@ -85,6 +89,21 @@ export default function TournamentDetail() {
           )}
         </div>
       )}
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3>Rang lista turnira</h3>
+        <p className="muted" style={{ marginTop: -6, fontSize: 13 }}>Timovi rangirani po broju pobjeda unutar OVOG turnira (ne po ukupnom rangu tima).</p>
+        {rangTurnira.length === 0 && <p className="muted">Još nema odigranih mečeva u ovom turniru.</p>}
+        {rangTurnira.map((r, idx) => (
+          <div key={r.tim.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)', opacity: r.eliminisan ? 0.55 : 1 }}>
+            <span className="mono" style={{ minWidth: 24 }}>{idx + 1}.</span>
+            <strong style={{ flex: 1 }}>{r.tim.naziv}</strong>
+            <span className="mono" style={{ color: 'var(--neon-green)', marginRight: 10 }}>{r.pobjeda}W</span>
+            <span className="mono muted">{r.poraza}L</span>
+            {r.eliminisan && <span className="status-pill status-odbijen" style={{ marginLeft: 10 }}>Eliminisan</span>}
+          </div>
+        ))}
+      </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <h3>Prijavljeni timovi ({turnir.TurnirPrijavas?.length || 0}/{turnir.max_timova})</h3>

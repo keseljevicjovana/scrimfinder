@@ -4,6 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { useChatUI } from '../context/ChatUIContext';
 import AvatarSvg from '../avatar/AvatarSvg';
 
+function pregledPoruke(p) {
+  if (!p) return 'Nema poruka još.';
+  if (p.tekst) return p.tekst;
+  if (p.slika) return '📷 Slika';
+  return '';
+}
+
 function nazivKonverzacije(k) {
   if (k.tip === 'tim') return k.tim?.naziv || 'Tim';
   return k.sagovornici?.[0]?.ime || 'Nepoznat korisnik';
@@ -64,6 +71,25 @@ export default function ChatWidget() {
     ucitajListu();
   };
 
+  // Slanje slike — BIRA se iz galerije/fajlova (input type="file" bez "capture" atributa
+  // ne otvara kameru direktno, nego standardni birač fajlova/galerije uređaja).
+  const slikaRef = useRef(null);
+  const posaljiSliku = async (e) => {
+    const fajl = e.target.files?.[0];
+    e.target.value = ''; // da isti fajl može ponovo da se izabere kasnije
+    if (!fajl || !aktivnaId) return;
+    if (fajl.size > 5 * 1024 * 1024) { alert('Slika je prevelika (maks. 5MB).'); return; }
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(fajl);
+    });
+    await api.post(`/chat/konverzacije/${aktivnaId}/poruke`, { slika: base64 });
+    ucitajPoruke(aktivnaId);
+    ucitajListu();
+  };
+
   const odgovoriNaZahtjev = async (id, odgovor) => {
     await api.put(`/chat/konverzacije/${id}/odgovor`, { odgovor });
     ucitajListu();
@@ -114,7 +140,7 @@ export default function ChatWidget() {
                         {k.tip === 'tim' && <span className="chat-pin">📌 TIM</span>}
                         {nazivKonverzacije(k)}
                       </div>
-                      <div className="preview">{k.poslednjaPoruka ? k.poslednjaPoruka.tekst : 'Nema poruka još.'}</div>
+                      <div className="preview">{pregledPoruke(k.poslednjaPoruka)}</div>
                     </div>
                     <div className="meta">
                       {k.nepr > 0 && <div className="unread-dot">{k.nepr}</div>}
@@ -129,7 +155,7 @@ export default function ChatWidget() {
                     <AvatarSvg avatar={k.sagovornici?.[0]?.avatar} pol={k.sagovornici?.[0]?.pol} size={34} glow={false} />
                     <div style={{ minWidth: 0 }}>
                       <div className="name">{nazivKonverzacije(k)}</div>
-                      <div className="preview">{k.poslednjaPoruka ? k.poslednjaPoruka.tekst : ''}</div>
+                      <div className="preview">{pregledPoruke(k.poslednjaPoruka)}</div>
                     </div>
                   </div>
                 ))}
@@ -170,7 +196,7 @@ export default function ChatWidget() {
 
               <div className="chat-messages" ref={poljeRef}>
                 {poruke
-                  .filter((p) => !pretraga.trim() || p.tekst.toLowerCase().includes(pretraga.toLowerCase()))
+                  .filter((p) => !pretraga.trim() || (p.tekst || '').toLowerCase().includes(pretraga.toLowerCase()))
                   .map((p, idx, niz) => {
                     const mojaPoruka = p.posiljalac_id === korisnik.id;
                     // U timskom (grupnom) čatu ima više učesnika — ime/avatar pošiljaoca se prikazuje
@@ -186,17 +212,20 @@ export default function ChatWidget() {
                           </div>
                         )}
                         <div className={`chat-bubble ${mojaPoruka ? 'out' : 'in'}`} style={pretraga.trim() ? { outline: '1px solid var(--neon-yellow)' } : undefined}>
+                          {p.slika && <img src={p.slika} alt="Poslata slika" className="chat-image" onClick={() => window.open(p.slika, '_blank')} />}
                           {p.tekst}
                         </div>
                       </div>
                     );
                   })}
-                {pretraga.trim() && poruke.filter((p) => p.tekst.toLowerCase().includes(pretraga.toLowerCase())).length === 0 && (
+                {pretraga.trim() && poruke.filter((p) => (p.tekst || '').toLowerCase().includes(pretraga.toLowerCase())).length === 0 && (
                   <p className="muted" style={{ fontSize: 12, textAlign: 'center' }}>Nema poruka koje sadrže "{pretraga}".</p>
                 )}
               </div>
 
               <form className="chat-input-row" onSubmit={posaljiPoruku}>
+                <input type="file" accept="image/*" ref={slikaRef} onChange={posaljiSliku} style={{ display: 'none' }} disabled={aktivna.mojStatus === 'na_cekanju'} />
+                <button type="button" className="chat-attach-btn" title="Pošalji sliku iz galerije" disabled={aktivna.mojStatus === 'na_cekanju'} onClick={() => slikaRef.current?.click()}>📎</button>
                 <input
                   placeholder={aktivna.mojStatus === 'na_cekanju' ? 'Prihvatite zahtjev da biste odgovorili...' : 'Poruka...'}
                   value={tekst}
