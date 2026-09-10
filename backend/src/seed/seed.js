@@ -41,6 +41,30 @@ function napraviSlikuDokaza(naslov, linija1, linija2) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
+// Pomoćna funkcija za bezbjedno kreiranje prisustva bez duplikata po korisniku
+async function upisiPrisustvaZaMec(mecId, timA, clanoviA, timB, clanoviB, statusB = 'moze') {
+  const dodatiKorisnici = new Set();
+  const prisustva = [];
+
+  for (const k of clanoviA) {
+    if (!dodatiKorisnici.has(k.id)) {
+      dodatiKorisnici.add(k.id);
+      prisustva.push({ mec_id: mecId, korisnik_id: k.id, tim_id: timA.id, status: 'moze' });
+    }
+  }
+
+  for (const k of clanoviB) {
+    if (!dodatiKorisnici.has(k.id)) {
+      dodatiKorisnici.add(k.id);
+      prisustva.push({ mec_id: mecId, korisnik_id: k.id, tim_id: timB.id, status: statusB });
+    }
+  }
+
+  if (prisustva.length > 0) {
+    await PrisustvoMeca.bulkCreate(prisustva);
+  }
+}
+
 async function seed() {
   await sequelize.sync({ force: true });
   console.log('Baza je resetovana. Generišem podatke...');
@@ -129,7 +153,7 @@ async function seed() {
   const timoviPoIgri = new Map();
   for (const ig of igre) timoviPoIgri.set(ig.id, []);
 
-  // Određujemo 20 kapitena (prvih 20 igrača u nizu) tako da svaki igrač ima bar 1 tim kao kapiten
+  // Određujemo 20 kapitena (prvih 20 igrača u nizu)
   for (let i = 0; i < 20; i++) {
     const igra = igre[i % igre.length];
     const tim = await Tim.create({
@@ -141,7 +165,7 @@ async function seed() {
     timoviPoIgri.get(igra.id).push(tim);
   }
 
-  // Organizujemo da svaki od 30 igrača bude u TAČNO 4 tima ukupno
+  // Svaki igrač je u 4 tima ukupno
   const timoviBrojac = new Map(igraci.map(k => [k.id, 0]));
   const clanoviTimaSet = new Map(svaTimovi.map(t => [t.id, new Set([t.kapiten_id])]));
   svaTimovi.forEach(t => timoviBrojac.set(t.kapiten_id, timoviBrojac.get(t.kapiten_id) + 1));
@@ -192,11 +216,7 @@ async function seed() {
             rezultat: ishod === 'nerijeseno' ? '1-1' : '2-1'
           });
           
-          const prisustva = [
-            ...clanoviMap.get(t1).map(k => ({ mec_id: mec.id, korisnik_id: k.id, tim_id: t1.id, status: 'moze' })),
-            ...clanoviMap.get(t2).map(k => ({ mec_id: mec.id, korisnik_id: k.id, tim_id: t2.id, status: 'moze' }))
-          ];
-          await PrisustvoMeca.bulkCreate(prisustva);
+          await upisiPrisustvaZaMec(mec.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'moze');
           ukupnoOdigranih++;
         }
 
@@ -208,11 +228,7 @@ async function seed() {
             predlozeni_termin: termin, broj_mapa: 3, pravila: 'Bo3', status: 'prihvacen'
           });
           const mec = await ScrimMec.create({ zahtjev_id: z.id, tim1_id: t1.id, tim2_id: t2.id, zakazano_za: termin, status: 'zakazan' });
-          const prisustva = [
-            ...clanoviMap.get(t1).map(k => ({ mec_id: mec.id, korisnik_id: k.id, tim_id: t1.id, status: 'moze' })),
-            ...clanoviMap.get(t2).map(k => ({ mec_id: mec.id, korisnik_id: k.id, tim_id: t2.id, status: 'na_cekanju' }))
-          ];
-          await PrisustvoMeca.bulkCreate(prisustva);
+          await upisiPrisustvaZaMec(mec.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'na_cekanju');
           ukupnoZakazanih++;
         }
       }
@@ -230,10 +246,7 @@ async function seed() {
     zahtjev_id: zSporni.id, tim1_id: sporniT1.id, tim2_id: sporniT2.id,
     zakazano_za: zSporni.predlozeni_termin, status: 'sporno', glas_tim1: 'pobjeda', glas_tim2: 'pobjeda'
   });
-  await PrisustvoMeca.bulkCreate([
-    ...clanoviMap.get(sporniT1).map(k => ({ mec_id: mecSporni.id, korisnik_id: k.id, tim_id: sporniT1.id, status: 'moze' })),
-    ...clanoviMap.get(sporniT2).map(k => ({ mec_id: mecSporni.id, korisnik_id: k.id, tim_id: sporniT2.id, status: 'moze' }))
-  ]);
+  await upisiPrisustvaZaMec(mecSporni.id, sporniT1, clanoviMap.get(sporniT1), sporniT2, clanoviMap.get(sporniT2), 'moze');
 
   // ============================================================
   // 5. TURNIRI (15 UKUPNO — PROŠLI, U TOKU, PREDSTOJEĆI)
