@@ -8,6 +8,7 @@ router.get('/zahtjevi/moji', auth, ctrl.mojiZahtjevi);
 
 router.get('/kalendar/moj', auth, ctrl.mojKalendar);
 router.get('/sporni/lista', auth, jeAdmin, ctrl.listaSpornihMeceva);
+router.get('/mecevi/cekaju-glas', auth, ctrl.mecoviKojiCekajuMojGlas);
 
 router.get('/mecevi/:id', ctrl.dohvatiMec);
 router.put('/mecevi/:id/glasaj', auth, ctrl.glasajZaRezultat);

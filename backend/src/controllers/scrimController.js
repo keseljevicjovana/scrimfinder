@@ -170,10 +170,35 @@ exports.listaSpornihMeceva = async (req, res) => {
 };
 
 // Igrač potvrđuje/odbija prisustvo zakazanom meču svog tima.
+// Mečevi gdje sam JA kapiten jednog od dva tima, vrijeme je prošlo, a JA JOŠ NISAM glasao/la —
+// koristi frontend da PROAKTIVNO pita kapitena za rezultat čim uđe na sajt (ne čekajući da
+// on sam ode na stranicu meča).
+exports.mecoviKojiCekajuMojGlas = async (req, res) => {
+  const mojiTimovi = await Tim.findAll({ where: { kapiten_id: req.korisnik.id } });
+  const timIds = mojiTimovi.map((t) => t.id);
+  if (timIds.length === 0) return res.json([]);
+  const mecevi = await ScrimMec.findAll({
+    where: { status: 'zakazan', zakazano_za: { [Op.lte]: new Date() }, [Op.or]: [{ tim1_id: timIds }, { tim2_id: timIds }] },
+    include: [{ model: Tim, as: 'tim1' }, { model: Tim, as: 'tim2' }],
+    order: [['zakazano_za', 'ASC']],
+  });
+  const filtrirano = mecevi.filter((m) => {
+    if (timIds.includes(m.tim1_id) && !m.glas_tim1) return true;
+    if (timIds.includes(m.tim2_id) && !m.glas_tim2) return true;
+    return false;
+  });
+  res.json(filtrirano);
+};
+
 exports.azurirajPrisustvo = async (req, res) => {
   const { status } = req.body; // 'moze' | 'ne_moze'
-  const prisustvo = await PrisustvoMeca.findOne({ where: { mec_id: req.params.id, korisnik_id: req.korisnik.id } });
+  const prisustvo = await PrisustvoMeca.findOne({ where: { mec_id: req.params.id, korisnik_id: req.korisnik.id }, include: [ScrimMec] });
   if (!prisustvo) return res.status(404).json({ poruka: 'Niste pozvani na ovaj meč.' });
+  // Poslije zakazanog termina se više ne prijavljuje prisustvo — ko nije odgovorio na vrijeme,
+  // podrazumijeva se da NIJE prisustvovao (isto se već ponaša i u računanju statistike).
+  if (new Date(prisustvo.ScrimMec.zakazano_za) <= new Date()) {
+    return res.status(400).json({ poruka: 'Vrijeme za prijavu prisustva je isteklo — meč je već počeo.' });
+  }
   prisustvo.status = status;
   await prisustvo.save();
   res.json(prisustvo);

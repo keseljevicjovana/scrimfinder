@@ -55,13 +55,18 @@ export default function MatchDetail() {
         )}
       </div>
 
-      {mojePrisustvo && mojePrisustvo.status === 'na_cekanju' && (
+      {mojePrisustvo && mojePrisustvo.status === 'na_cekanju' && !vremeProslo && (
         <div className="prisustvo-pitanje">
           <span>Možeš li prisustvovati ovom meču?</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-sm" onClick={() => azurirajPrisustvo('moze')}>Mogu</button>
             <button className="btn btn-sm btn-outline" onClick={() => azurirajPrisustvo('ne_moze')}>Ne mogu</button>
           </div>
+        </div>
+      )}
+      {mojePrisustvo && mojePrisustvo.status === 'na_cekanju' && vremeProslo && (
+        <div className="prisustvo-pitanje" style={{ opacity: 0.7 }}>
+          <span>Vrijeme za prijavu prisustva je isteklo (meč je već počeo) — računa se kao da niste prisustvovali.</span>
         </div>
       )}
       {mojePrisustvo && mojePrisustvo.status !== 'na_cekanju' && (
@@ -106,6 +111,18 @@ export default function MatchDetail() {
           </div>
         </div>
       )}
+
+      {mec.prisustva?.length > 0 && vremeProslo && mec.status === 'zakazan' && (() => {
+        const potvrdioTim1 = mec.prisustva.some((p) => p.tim_id === mec.tim1_id && p.status === 'moze');
+        const potvrdioTim2 = mec.prisustva.some((p) => p.tim_id === mec.tim2_id && p.status === 'moze');
+        if (potvrdioTim1 && potvrdioTim2) return null;
+        return (
+          <div className="spor-banner" style={{ marginTop: 16 }}>
+            ⚠ {!potvrdioTim1 && `Nijedan igrač iz tima ${mec.tim1?.naziv} nije potvrdio prisustvo. `}
+            {!potvrdioTim2 && `Nijedan igrač iz tima ${mec.tim2?.naziv} nije potvrdio prisustvo.`}
+          </div>
+        );
+      })()}
 
       {mec.prisustva?.length > 0 && (
         <div className="card" style={{ marginTop: 16 }}>

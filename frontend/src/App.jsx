@@ -2,6 +2,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
 import ChatWidget from './components/ChatWidget';
+import MatchVotePrompt from './components/MatchVotePrompt';
 import { useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/admin" element={<PrivateRoute samoAdmin><AdminDashboard /></PrivateRoute>} />
       </Routes>
       <ChatWidget />
+      <MatchVotePrompt />
     </ZakljucajDokNePromijeniLozinku>
   );
 }

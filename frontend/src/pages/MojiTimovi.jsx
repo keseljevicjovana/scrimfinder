@@ -11,7 +11,7 @@ export default function MojiTimovi() {
   const [pozivnice, setPozivnice] = useState([]);
   const [aplikacije, setAplikacije] = useState([]);
   const [igre, setIgre] = useState([]);
-  const [podaci, setPodaci] = useState({ naziv: '', igra_id: '', opis: '', logo_url: '' });
+  const [podaci, setPodaci] = useState({ naziv: '', igra_id: '', opis: '' });
   const [greska, setGreska] = useState('');
 
   const ucitaj = () => {
@@ -137,10 +137,6 @@ export default function MojiTimovi() {
           <div className="field">
             <label>Opis</label>
             <textarea rows={3} value={podaci.opis} onChange={(e) => setPodaci({ ...podaci, opis: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>URL logotipa (opciono)</label>
-            <input value={podaci.logo_url} onChange={(e) => setPodaci({ ...podaci, logo_url: e.target.value })} />
           </div>
           {greska && <p className="error-text">{greska}</p>}
           <button className="btn" type="submit">Kreiraj tim</button>
