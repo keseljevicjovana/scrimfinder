@@ -51,8 +51,12 @@ async function upisiPrisustvaZaMec(mecId, timA, clanoviA, timB, clanoviB, status
 }
 
 async function seed() {
+  // Onemogućavamo FK provjere da MySQL dopusti force sync i brisanje povezanih tabela
+  await sequelize.query('SET FOREIGN_KEY_CHECKS = 0');
   await sequelize.sync({ force: true });
-  console.log('Baza je resetovana. Generišem podatke...');
+  await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
+  
+  console.log('Baza je uspješno resetovana. Generišem nove podatke...');
 
   const lozinkaHash = await bcrypt.hash('lozinka123', 10);
 
@@ -177,7 +181,6 @@ async function seed() {
   // Organizacija članstava: Filip, Ana i Marko su u MINIMUM 3 RAZLIČITA TIMA
   const clanoviTimaSet = new Map(svaTimovi.map(t => [t.id, new Set([t.kapiten_id])]));
 
-  // Dodajemo Anu, Marka i Filipa u još po 2 tima da imaju po 3 tima ukupno
   clanoviTimaSet.get(svaTimovi[3].id).add(ana.id);
   clanoviTimaSet.get(svaTimovi[4].id).add(ana.id);
 
@@ -187,7 +190,7 @@ async function seed() {
   clanoviTimaSet.get(svaTimovi[7].id).add(filip.id);
   clanoviTimaSet.get(svaTimovi[8].id).add(filip.id);
 
-  // Popunjavamo ostale timove sa igračima (4 do 6 po timu)
+  // Popunjavamo ostale timove
   for (const tim of svaTimovi) {
     const trenutniSet = clanoviTimaSet.get(tim.id);
     while (trenutniSet.size < 5) {
@@ -196,7 +199,7 @@ async function seed() {
     }
   }
 
-  // Upisujemo članove i kreiramo grupne chatove za svaki tim
+  // Upisujemo članove i kreiramo grupne chatove
   for (const tim of svaTimovi) {
     const clanoviIds = Array.from(clanoviTimaSet.get(tim.id));
     const clanoviObj = igraci.filter(k => clanoviIds.includes(k.id));
@@ -204,11 +207,9 @@ async function seed() {
 
     await ClanTima.bulkCreate(clanoviIds.map(kid => ({ tim_id: tim.id, korisnik_id: kid })));
 
-    // Timski grupni chat
     const konv = await Konverzacija.create({ tip: 'tim', naziv: `Chat - ${tim.naziv}`, tim_id: tim.id });
     await ClanKonverzacije.bulkCreate(clanoviIds.map(kid => ({ konverzacija_id: konv.id, korisnik_id: kid, status: 'prihvacena' })));
 
-    // Dodajemo početne poruke u timski chat
     await Poruka.bulkCreate([
       { konverzacija_id: konv.id, posiljalac_id: tim.kapiten_id, tekst: `Pozdrav ekipo! Dobrodošli u zvanični chat za ${tim.naziv}.` },
       { konverzacija_id: konv.id, posiljalac_id: clanoviIds[1], tekst: 'Pozdrav kapitene! Kada igramo sledeći skrim?' },
@@ -217,20 +218,19 @@ async function seed() {
   }
 
   // ============================================================
-  // 4. ZAHTJEVI NA ČEKANJU (ZA DEMONSTRACIJU PROFESORU)
+  // 4. ZAHTJEVI NA ČEKANJU
   // ============================================================
-  // Nekoliko timova šalje zahtjeve Aninom i Markovom timu (prihvat/odbijanje na uvid)
-  const zZaAna = await ScrimZahtjev.create({
+  await ScrimZahtjev.create({
     tim_posiljalac_id: svaTimovi[9].id, tim_primalac_id: timAna.id,
     predlozeni_termin: danaUnazad(-2), broj_mapa: 3, pravila: 'Bo3 Tournament Standard', status: 'na_cekanju'
   });
 
-  const zZaMarko = await ScrimZahtjev.create({
+  await ScrimZahtjev.create({
     tim_posiljalac_id: timAna.id, tim_primalac_id: timMarko.id,
     predlozeni_termin: danaUnazad(-3), broj_mapa: 3, pravila: 'Bo3 Elitni meč', status: 'na_cekanju'
   });
 
-  const zZaFilip = await ScrimZahtjev.create({
+  await ScrimZahtjev.create({
     tim_posiljalac_id: svaTimovi[10].id, tim_primalac_id: timFilip.id,
     predlozeni_termin: danaUnazad(-1), broj_mapa: 1, pravila: 'Bo1 Warmup', status: 'na_cekanju'
   });
@@ -238,9 +238,6 @@ async function seed() {
   // ============================================================
   // 5. MEČEVI (ODIGRANI + BUDUĆI KALENDAR)
   // ============================================================
-  let ukupnoOdigranih = 0;
-  let ukupnoZakazanih = 0;
-
   for (const igra of igre) {
     const timovi = timoviPoIgri.get(igra.id);
     for (let i = 0; i < timovi.length; i++) {
@@ -248,7 +245,6 @@ async function seed() {
         const t1 = timovi[i];
         const t2 = timovi[j];
 
-        // Odigrani meč (prošlost)
         const zOdigran = await ScrimZahtjev.create({
           tim_posiljalac_id: t1.id, tim_primalac_id: t2.id,
           predlozeni_termin: danaUnazad(nasumicniBroj(2, 25)), broj_mapa: 3, pravila: 'Standard', status: 'prihvacen'
@@ -258,22 +254,19 @@ async function seed() {
           status: 'odigran', ishod: 'tim1', pobjednik_tim_id: t1.id, rezultat: '2-1'
         });
         await upisiPrisustvaZaMec(mecOdigran.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'moze');
-        ukupnoOdigranih++;
 
-        // Zakazan meč (budućnost za kalendar)
         const zZakazan = await ScrimZahtjev.create({
           tim_posiljalac_id: t1.id, tim_primalac_id: t2.id,
           predlozeni_termin: danaUnazad(-nasumicniBroj(2, 14)), broj_mapa: 3, pravila: 'Bo3', status: 'prihvacen'
         });
         const mecZakazan = await ScrimMec.create({ zahtjev_id: zZakazan.id, tim1_id: t1.id, tim2_id: t2.id, zakazano_za: zZakazan.predlozeni_termin, status: 'zakazan' });
         await upisiPrisustvaZaMec(mecZakazan.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'na_cekanju');
-        ukupnoZakazanih++;
       }
     }
   }
 
   // ============================================================
-  // 6. TURNIRI (15 UKUPNO)
+  // 6. TURNIRI
   // ============================================================
   const turniriDef = [
     { naziv: 'LoL Jesenji Kup 2026', igra: igre[0], status: 'zavrsen', dana: 20 },
@@ -307,7 +300,7 @@ async function seed() {
     }
   }
 
-  // Direct chat između Ane i Marka
+  // Direktna konverzacija
   const konvIzmedju = await Konverzacija.create({ tip: 'direktna' });
   await ClanKonverzacije.bulkCreate([
     { konverzacija_id: konvIzmedju.id, korisnik_id: ana.id, status: 'prihvacena' },
@@ -321,7 +314,7 @@ async function seed() {
   console.log('\n======================================================================');
   console.log(' SEED USPJEŠNO ZAVRŠEN ZA DEMONSTRACIJU!');
   console.log('======================================================================');
-  console.log(' 3 SPECIFIČNA TEST NALOGA (Lozinka za sve: lozinka123):');
+  console.log(' 3 SPECIFIČNA TEST NALOGA (Lozinka: lozinka123):');
   console.log(` 1. Filip Vujović  : ${filip.email}`);
   console.log(` 2. Ana Radulović   : ${ana.email} (Kapiten: Podgoričke Mange - LoL)`);
   console.log(` 3. Marko Backović  : ${marko.email} (Kapiten: Nikšićki Vukovi - LoL)`);
