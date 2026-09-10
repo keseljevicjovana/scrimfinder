@@ -8,7 +8,7 @@ exports.napraviTurnir = async (req, res) => {
 };
 
 exports.listaTurnira = async (req, res) => {
-  const turniri = await Turnir.findAll({ include: [Igra], order: [['datum', 'ASC']] });
+  const turniri = await Turnir.findAll({ include: [Igra, { model: TurnirPrijava, include: [Tim] }], order: [['datum', 'ASC']] });
   res.json(turniri);
 };
 

@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const sequelize = require('../config/db');
 const {
   Tim, Igra, Korisnik, ClanTima, Pozicija, Pozivnica, Aplikacija, Dostupnost, ScrimMec, PrisustvoMeca,
 } = require('../models');
@@ -229,13 +230,17 @@ exports.brzaPretraga = async (req, res) => {
   const { q } = req.query;
   // Bez upita (npr. prvi ulazak na stranicu Pretraga) — vrati podrazumijevanu listu umjesto
   // praznog ekrana, da stranica odmah izgleda "živo" i popunjeno.
-  const timoviWhere = q ? { naziv: { [Op.like]: `%${q}%` } } : {};
-  const igraciWhere = q ? { ime: { [Op.like]: `%${q}%` } } : {};
+  // VAŽNO: koristimo LOWER(...) na OBJE strane poređenja da pretraga radi bez obzira na
+  // collation baze (neke baze, npr. TiDB sa određenim podešavanjima, razlikuju velika/mala slova
+  // kod običnog LIKE poređenja, što bi značilo da "filip" ne pronađe "Filip").
+  const q_lower = q ? q.toLowerCase() : null;
+  const timoviWhere = q ? sequelize.where(sequelize.fn('LOWER', sequelize.col('naziv')), { [Op.like]: `%${q_lower}%` }) : {};
+  const igraciWhere = q ? sequelize.where(sequelize.fn('LOWER', sequelize.col('ime')), { [Op.like]: `%${q_lower}%` }) : {};
   const limit = q ? 10 : 24;
 
   const timovi = await Tim.findAll({ where: timoviWhere, include: [Igra], limit, order: q ? undefined : [['created_at', 'DESC']] });
   const igraci = await Korisnik.findAll({
-    where: { ...igraciWhere, uloga: 'igrac' },
+    where: q ? { [Op.and]: [igraciWhere, { uloga: 'igrac' }] } : { uloga: 'igrac' },
     attributes: ['id', 'ime', 'avatar', 'pol'],
     limit, order: q ? undefined : [['created_at', 'DESC']],
   });

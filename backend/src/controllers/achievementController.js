@@ -36,7 +36,7 @@ exports.leaderboardTimovi = async (req, res) => {
   }).filter((r) => r.odigranihMeceva > 0);
 
   rezultat.sort((a, b) => b.poeni - a.poeni);
-  res.json(rezultat.slice(0, 50));
+  res.json(rezultat);
 };
 
 // Rangiranje IGRAČA po % prisustva mečevima (posvećenost), preko SVIH njihovih timova.
@@ -69,5 +69,5 @@ exports.leaderboardIgraci = async (req, res) => {
   }
 
   rezultat.sort((a, b) => b.postotakPrisustva - a.postotakPrisustva || b.prisustvovao - a.prisustvovao);
-  res.json(rezultat.slice(0, 50));
+  res.json(rezultat);
 };

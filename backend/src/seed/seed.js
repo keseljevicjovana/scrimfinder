@@ -206,7 +206,9 @@ async function seed() {
   }
 
   const brojIgraca = 320;
-  const igraci = [...izlogIgraci];
+  // VAŽNO: izlog igrači NISU dio ove opšte liste — dodjeljuju im se POSEBNI, unaprijed
+  // određeni timovi ispod (nema šanse da ih slučajni odabir gurne u isti tim kao neko drugo).
+  const igraci = [];
   for (let i = 0; i < brojIgraca; i++) {
     const p = generisiIgraca();
     const korisnik = await Korisnik.create({
@@ -305,21 +307,39 @@ async function seed() {
   }
   console.log(`Napravljeno ${svaTimovi.length} timova.`);
 
-  // Dodatno ubaci "izloška" igrača (Filip/Ana/Marko) kao ČLANOVE u još nekoliko timova
-  // (ali NIKAD u dva tima ISTE igre) — da bi imali najviše timova od svih korisnika.
-  for (const izlog of izlogIgraci) {
-    const profiliIzloga = await ProfilIgraca.findAll({ where: { korisnik_id: izlog.id } });
-    for (const profil of profiliIzloga) {
-      const igraId = profil.igra_id;
-      const kandidati = timoviPoIgri.get(igraId).filter((t) => !clanoviMap.get(t).some((c) => c.id === izlog.id));
-      const dodatnihTimova = izmijesaj(kandidati).slice(0, 2); // po 2 dodatna tima za svaku njegovu igru
-      for (const tim of dodatnihTimova) {
-        await ClanTima.findOrCreate({ where: { tim_id: tim.id, korisnik_id: izlog.id } });
-        await dodajUTimskiChat(tim.id, izlog.id);
-        clanoviMap.get(tim).push(izlog);
-      }
+  // ============================================================
+  // NAMJENSKI TIMOVI ZA IZLOG NALOGE (Filip/Ana/Marko) — svako je KAPITEN 2 tima,
+  // u DVIJE RAZLIČITE igre (nema šanse da se ova dva tima ikad sudare u meču),
+  // i svaki tim ima i nekoliko običnih članova iz opšte grupe igrača.
+  // ============================================================
+  const izlogTimoviDef = [
+    { izlog: izlogIgraci[0], nazivi: ['Filipova Falanga', 'Filipovi Fantomi'], igre: [cs2, dota2] },
+    { izlog: izlogIgraci[1], nazivi: ['Anini Anđeli', 'Ana Elite Squad'], igre: [valorant, ow2] },
+    { izlog: izlogIgraci[2], nazivi: ['Markov Kvintet', 'Marko Legion'], igre: [lol, rl] },
+  ];
+  for (const def of izlogTimoviDef) {
+    for (let i = 0; i < def.igre.length; i++) {
+      const igra = def.igre[i];
+      const brojDodatnihClanova = nasumicniBroj(3, 5);
+      const dostupniIgraci = izmijesaj(igraci).filter((k) => !iskorisceniIgraciPoIgri.get(igra.id).has(k.id));
+      const dodatniClanovi = dostupniIgraci.slice(0, brojDodatnihClanova);
+      dodatniClanovi.forEach((k) => iskorisceniIgraciPoIgri.get(igra.id).add(k.id));
+      iskorisceniIgraciPoIgri.get(igra.id).add(def.izlog.id);
+
+      const sviClanovi = [def.izlog, ...dodatniClanovi]; // izlog nalog je UVIJEK prvi = kapiten
+      const tim = await Tim.create({
+        naziv: def.nazivi[i], igra_id: igra.id, opis: 'Demo tim za prezentaciju platforme.',
+        kapiten_id: def.izlog.id, trazi_igrace: true, grb: nasumicniGrb(),
+      });
+      await ClanTima.bulkCreate(sviClanovi.map((k) => ({ tim_id: tim.id, korisnik_id: k.id })));
+      for (const k of sviClanovi) await dodajUTimskiChat(tim.id, k.id);
+
+      timoviPoIgri.get(igra.id).push(tim);
+      clanoviMap.set(tim, sviClanovi);
+      svaTimovi.push(tim);
     }
   }
+  console.log('Napravljeni namjenski timovi za izlog naloge (svaki je kapiten tačno 2 tima).');
 
   // ============================================================
   // ISTORIJA MEČEVA — bogata, za SVE timove, plus budući zakazani mečevi (kalendar)

@@ -191,6 +191,13 @@ label { display: block; font-size: 12px; text-transform: uppercase; letter-spaci
 .status-prihvacen, .status-prihvacena, .status-odigran { background: rgba(57,255,158,0.15); color: var(--neon-green); border-color: rgba(57,255,158,0.4); }
 .status-odbijen, .status-odbijena, .status-otkazan { background: rgba(255,69,105,0.15); color: var(--danger); border-color: rgba(255,69,105,0.4); }
 
+/* Posebne boje ZA STATUS TURNIRA — namjerno odvojeno od gornjih generičkih klasa jer je
+   semantika boja ovdje drugačija (npr. "završen" je crveno, ne zeleno kao "odigran" meč). */
+.turnir-status-u_toku { background: rgba(74,125,255,0.15); color: var(--neon-blue); border-color: rgba(74,125,255,0.5); }
+.turnir-status-prijave_otvorene { background: rgba(255,225,77,0.15); color: var(--neon-yellow); border-color: rgba(255,225,77,0.5); }
+.turnir-status-zavrsen { background: rgba(255,69,105,0.15); color: var(--danger); border-color: rgba(255,69,105,0.5); }
+.turnir-status-prijavljen { background: rgba(57,255,158,0.15); color: var(--neon-green); border-color: rgba(57,255,158,0.5); }
+
 .error-text { color: var(--danger); font-size: 13px; margin-top: 6px; }
 .muted { color: var(--text-muted); font-size: 13px; }
 .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 20px 0; }
