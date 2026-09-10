@@ -227,24 +227,40 @@ exports.odgovoriNaAplikaciju = async (req, res) => {
 
 // ---- Pretraga ----
 exports.brzaPretraga = async (req, res) => {
-  const { q } = req.query;
-  // Bez upita (npr. prvi ulazak na stranicu Pretraga) — vrati podrazumijevanu listu umjesto
-  // praznog ekrana, da stranica odmah izgleda "živo" i popunjeno.
-  // VAŽNO: koristimo LOWER(...) na OBJE strane poređenja da pretraga radi bez obzira na
-  // collation baze (neke baze, npr. TiDB sa određenim podešavanjima, razlikuju velika/mala slova
-  // kod običnog LIKE poređenja, što bi značilo da "filip" ne pronađe "Filip").
-  const q_lower = q ? q.toLowerCase() : null;
-  const timoviWhere = q ? sequelize.where(sequelize.fn('LOWER', sequelize.col('naziv')), { [Op.like]: `%${q_lower}%` }) : {};
-  const igraciWhere = q ? sequelize.where(sequelize.fn('LOWER', sequelize.col('ime')), { [Op.like]: `%${q_lower}%` }) : {};
-  const limit = q ? 10 : 24;
+  try {
+    const { q } = req.query;
+    const q_lower = q ? q.toLowerCase() : null;
 
-  const timovi = await Tim.findAll({ where: timoviWhere, include: [Igra], limit, order: q ? undefined : [['created_at', 'DESC']] });
-  const igraci = await Korisnik.findAll({
-    where: q ? { [Op.and]: [igraciWhere, { uloga: 'igrac' }] } : { uloga: 'igrac' },
-    attributes: ['id', 'ime', 'avatar', 'pol'],
-    limit, order: q ? undefined : [['created_at', 'DESC']],
-  });
-  res.json({ timovi, igraci });
+    // Eksplicitno specifikujemo 'Tim.naziv' da izbjegnemo "ambiguous" grešku
+    const timoviWhere = q 
+      ? sequelize.where(sequelize.fn('LOWER', sequelize.col('Tim.naziv')), 'LIKE', `%${q_lower}%`) 
+      : {};
+
+    const igraciWhere = q 
+      ? sequelize.where(sequelize.fn('LOWER', sequelize.col('ime')), 'LIKE', `%${q_lower}%`) 
+      : {};
+
+    const limit = q ? 10 : 24;
+
+    const timovi = await Tim.findAll({ 
+      where: timoviWhere, 
+      include: [Igra], 
+      limit, 
+      order: q ? undefined : [['created_at', 'DESC']] 
+    });
+
+    const igraci = await Korisnik.findAll({
+      where: q ? { [Op.and]: [igraciWhere, { uloga: 'igrac' }] } : { uloga: 'igrac' },
+      attributes: ['id', 'ime', 'avatar', 'pol'],
+      limit, 
+      order: q ? undefined : [['created_at', 'DESC']],
+    });
+
+    res.json({ timovi, igraci });
+  } catch (err) {
+    console.error('Greška pri brzoj pretrazi:', err);
+    res.status(500).json({ greska: 'Greška na serveru prilikom pretrage.' });
+  }
 };
 
 exports.detaljnaPretraga = async (req, res) => {
