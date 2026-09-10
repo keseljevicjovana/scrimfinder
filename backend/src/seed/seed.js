@@ -3,12 +3,10 @@ const bcrypt = require('bcryptjs');
 const sequelize = require('../config/db');
 const {
   Korisnik, Igra, Pozicija, ProfilIgraca, Dostupnost, Tim, ClanTima,
-  ScrimZahtjev, ScrimMec, PrisustvoMeca, Komentar, KomentarLajk,
-  Dostignuce, KorisnikDostignuce, Notifikacija, Turnir, TurnirPrijava, RasporedTurnira,
-  Konverzacija, ClanKonverzacije, Poruka,
+  ScrimZahtjev, ScrimMec, PrisustvoMeca, Dostignuce, KorisnikDostignuce,
+  Turnir, TurnirPrijava, Konverzacija, ClanKonverzacije, Poruka,
 } = require('../models');
 const { generisiNasumicniAvatar } = require('../utils/avatarOptions');
-const { dodajUTimskiChat } = require('../utils/chat');
 
 function danaUnazad(dani, sat = 19) {
   const d = new Date(Date.now() - dani * 24 * 3600 * 1000);
@@ -29,19 +27,6 @@ function ocisti(tekst) {
   return tekst.toLowerCase().replace(/[čć]/g, 'c').replace(/ž/g, 'z').replace(/š/g, 's').replace(/đ/g, 'dj');
 }
 
-function napraviSlikuDokaza(naslov, linija1, linija2) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="240">
-    <rect width="420" height="240" fill="#0d0a16"/>
-    <rect x="8" y="8" width="404" height="224" fill="none" stroke="#00f0ff" stroke-width="2"/>
-    <text x="30" y="50" fill="#ffe14d" font-family="monospace" font-size="18" font-weight="bold">${naslov}</text>
-    <text x="30" y="100" fill="#f1eaff" font-family="monospace" font-size="14">${linija1}</text>
-    <text x="30" y="130" fill="#f1eaff" font-family="monospace" font-size="14">${linija2}</text>
-    <text x="30" y="200" fill="#9c8fc2" font-family="monospace" font-size="11">screenshot-dokaz.png</text>
-  </svg>`;
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-}
-
-// Pomoćna funkcija za bezbjedno kreiranje prisustva bez duplikata po korisniku
 async function upisiPrisustvaZaMec(mecId, timA, clanoviA, timB, clanoviB, statusB = 'moze') {
   const dodatiKorisnici = new Set();
   const prisustva = [];
@@ -91,32 +76,34 @@ async function seed() {
     igre.push(igra);
   }
 
+  const lolIgra = igre[0]; // League of Legends
+
   // ============================================================
-  // 2. KORISNICI (TAČNO 30 IGRAČA + ADMIN)
+  // 2. KORISNICI (30 IGRAČA SA 3 SPECIFIČNA)
   // ============================================================
   const admin = await Korisnik.create({
     ime: 'Admin Marko', email: 'admin@scrimfinder.me', lozinka_hash: lozinkaHash, uloga: 'admin',
     pol: 'muski', avatar: generisiNasumicniAvatar('muski'), mora_promijeniti_lozinku: false,
   });
 
-  const triGlavna = [
-    { ime: 'Filip Vujović', email: 'filip.vujovic@scrimfinder.me', pol: 'muski' },
-    { ime: 'Ana Radulović', email: 'ana.radulovic@scrimfinder.me', pol: 'zenski' },
-    { ime: 'Marko Backović', email: 'marko.backovic@scrimfinder.me', pol: 'muski' },
-  ];
+  const filip = await Korisnik.create({
+    ime: 'Filip Vujović', email: 'filip.vujovic@scrimfinder.me', lozinka_hash: lozinkaHash, pol: 'muski',
+    avatar: generisiNasumicniAvatar('muski'), mora_promijeniti_lozinku: false, bio: 'Glavni organizator timova.'
+  });
+  const ana = await Korisnik.create({
+    ime: 'Ana Radulović', email: 'ana.radulovic@scrimfinder.me', lozinka_hash: lozinkaHash, pol: 'zenski',
+    avatar: generisiNasumicniAvatar('zenski'), mora_promijeniti_lozinku: false, bio: 'LoL Kapiten - Podgoričke Mange.'
+  });
+  const marko = await Korisnik.create({
+    ime: 'Marko Backović', email: 'marko.backovic@scrimfinder.me', lozinka_hash: lozinkaHash, pol: 'muski',
+    avatar: generisiNasumicniAvatar('muski'), mora_promijeniti_lozinku: false, bio: 'LoL Kapiten - Nikšićki Vukovi.'
+  });
 
-  const imenaMuska = ['Nikola', 'Stefan', 'Miloš', 'Aleksandar', 'Luka', 'Vuk', 'Uroš', 'Bogdan', 'Petar', 'Nemanja', 'Dušan', 'Đorđe', 'Filip', 'Ognjen', 'Lazar'];
-  const imenaZenska = ['Jovana', 'Milica', 'Ivana', 'Tijana', 'Ana', 'Jelena', 'Marija', 'Teodora', 'Katarina', 'Sara', 'Milena', 'Nina'];
-  const prezimena = ['Petrović', 'Ilić', 'Stojanović', 'Đorđević', 'Marković', 'Pavlović', 'Popović', 'Nikolić', 'Jovanović', 'Vujović', 'Radulović', 'Vukotić'];
+  const igraci = [filip, ana, marko];
 
-  const igraci = [];
-  for (const p of triGlavna) {
-    const k = await Korisnik.create({
-      ime: p.ime, email: p.email, lozinka_hash: lozinkaHash, pol: p.pol,
-      avatar: generisiNasumicniAvatar(p.pol), mora_promijeniti_lozinku: false, bio: 'Glavni test nalog na platformi.'
-    });
-    igraci.push(k);
-  }
+  const imenaMuska = ['Nikola', 'Stefan', 'Miloš', 'Aleksandar', 'Luka', 'Vuk', 'Uroš', 'Bogdan', 'Petar', 'Nemanja', 'Dušan', 'Đorđe', 'Ognjen', 'Lazar'];
+  const imenaZenska = ['Jovana', 'Milica', 'Ivana', 'Tijana', 'Jelena', 'Marija', 'Teodora', 'Katarina', 'Sara', 'Milena', 'Nina'];
+  const prezimena = ['Petrović', 'Ilić', 'Stojanović', 'Đorđević', 'Marković', 'Pavlović', 'Popović', 'Nikolić', 'Jovanović', 'Vukotić'];
 
   while (igraci.length < 30) {
     const pol = Math.random() < 0.7 ? 'muski' : 'zenski';
@@ -138,7 +125,7 @@ async function seed() {
   }
 
   // ============================================================
-  // 3. TIMOVI (TAČNO 20 TIMOVA — SVI ČLANOVI U 4 TIMA, KAPITENI U BAR 1)
+  // 3. TIMOVI (20 TIMOVA — ANA I MARKO KAPITENI U ISTOJ IGRI)
   // ============================================================
   const naziviTimova = [
     'Podgoričke Mange', 'Nikšićki Vukovi', 'Cetinjski Orlovi', 'Budvanski Titani',
@@ -153,44 +140,103 @@ async function seed() {
   const timoviPoIgri = new Map();
   for (const ig of igre) timoviPoIgri.set(ig.id, []);
 
-  // Određujemo 20 kapitena (prvih 20 igrača u nizu)
-  for (let i = 0; i < 20; i++) {
+  // Tim 1: Ana Kapiten (League of Legends)
+  const timAna = await Tim.create({
+    naziv: naziviTimova[0], igra_id: lolIgra.id, opis: 'Glavni LoL tim iz Podgorice pod vodstvom Ane.',
+    kapiten_id: ana.id, trazi_igrace: true, grb: { oblik: 'stit', pozadina: '#1a1330', simbol: 'zmaj', simbolBoja: '#00f0ff' }
+  });
+  svaTimovi.push(timAna); timoviPoIgri.get(lolIgra.id).push(timAna);
+
+  // Tim 2: Marko Kapiten (ISTO League of Legends)
+  const timMarko = await Tim.create({
+    naziv: naziviTimova[1], igra_id: lolIgra.id, opis: 'Elitni LoL tim iz Nikšića pod vodstvom Marka.',
+    kapiten_id: marko.id, trazi_igrace: false, grb: { oblik: 'krug', pozadina: '#30131a', simbol: 'vuk', simbolBoja: '#ff0055' }
+  });
+  svaTimovi.push(timMarko); timoviPoIgri.get(lolIgra.id).push(timMarko);
+
+  // Tim 3: Filip Kapiten (CS2)
+  const timFilip = await Tim.create({
+    naziv: naziviTimova[2], igra_id: igre[1].id, opis: 'Taktički CS2 tim predvođen Filipom.',
+    kapiten_id: filip.id, trazi_igrace: true, grb: { oblik: 'stit', pozadina: '#1a3013', simbol: 'orao', simbolBoja: '#55ff00' }
+  });
+  svaTimovi.push(timFilip); timoviPoIgri.get(igre[1].id).push(timFilip);
+
+  // Generisanje preostalih 17 timova
+  for (let i = 3; i < 20; i++) {
     const igra = igre[i % igre.length];
+    const kapiten = igraci[i];
     const tim = await Tim.create({
-      naziv: naziviTimova[i], igra_id: igra.id, opis: 'Zvanični tim sa kompletnim sastavom.',
-      kapiten_id: igraci[i].id, trazi_igrace: Math.random() < 0.3,
-      grb: { oblik: 'stit', pozadina: '#1a1330', simbol: 'zmaj', simbolBoja: '#00f0ff' }
+      naziv: naziviTimova[i], igra_id: igra.id, opis: 'Takmičarski tim za scrim mečeve.',
+      kapiten_id: kapiten.id, trazi_igrace: Math.random() < 0.3,
+      grb: { oblik: 'stit', pozadina: '#1a1330', simbol: 'kruna', simbolBoja: '#ffe14d' }
     });
     svaTimovi.push(tim);
     timoviPoIgri.get(igra.id).push(tim);
   }
 
-  // Svaki igrač je u 4 tima ukupno
-  const timoviBrojac = new Map(igraci.map(k => [k.id, 0]));
+  // Organizacija članstava: Filip, Ana i Marko su u MINIMUM 3 RAZLIČITA TIMA
   const clanoviTimaSet = new Map(svaTimovi.map(t => [t.id, new Set([t.kapiten_id])]));
-  svaTimovi.forEach(t => timoviBrojac.set(t.kapiten_id, timoviBrojac.get(t.kapiten_id) + 1));
 
-  for (const k of igraci) {
-    while (timoviBrojac.get(k.id) < 4) {
-      const slobodniTimovi = svaTimovi.filter(t => !clanoviTimaSet.get(t.id).has(k.id) && clanoviTimaSet.get(t.id).size < 6);
-      if (slobodniTimovi.length === 0) break;
-      const izabraniTim = nasumicno(slobodniTimovi);
-      clanoviTimaSet.get(izabraniTim.id).add(k.id);
-      timoviBrojac.set(k.id, timoviBrojac.get(k.id) + 1);
+  // Dodajemo Anu, Marka i Filipa u još po 2 tima da imaju po 3 tima ukupno
+  clanoviTimaSet.get(svaTimovi[3].id).add(ana.id);
+  clanoviTimaSet.get(svaTimovi[4].id).add(ana.id);
+
+  clanoviTimaSet.get(svaTimovi[5].id).add(marko.id);
+  clanoviTimaSet.get(svaTimovi[6].id).add(marko.id);
+
+  clanoviTimaSet.get(svaTimovi[7].id).add(filip.id);
+  clanoviTimaSet.get(svaTimovi[8].id).add(filip.id);
+
+  // Popunjavamo ostale timove sa igračima (4 do 6 po timu)
+  for (const tim of svaTimovi) {
+    const trenutniSet = clanoviTimaSet.get(tim.id);
+    while (trenutniSet.size < 5) {
+      const slobodanIgrac = nasumicno(igraci);
+      trenutniSet.add(slobodanIgrac.id);
     }
   }
 
+  // Upisujemo članove i kreiramo grupne chatove za svaki tim
   for (const tim of svaTimovi) {
     const clanoviIds = Array.from(clanoviTimaSet.get(tim.id));
     const clanoviObj = igraci.filter(k => clanoviIds.includes(k.id));
     clanoviMap.set(tim, clanoviObj);
 
     await ClanTima.bulkCreate(clanoviIds.map(kid => ({ tim_id: tim.id, korisnik_id: kid })));
-    for (const kid of clanoviIds) await dodajUTimskiChat(tim.id, kid);
+
+    // Timski grupni chat
+    const konv = await Konverzacija.create({ tip: 'tim', naziv: `Chat - ${tim.naziv}`, tim_id: tim.id });
+    await ClanKonverzacije.bulkCreate(clanoviIds.map(kid => ({ konverzacija_id: konv.id, korisnik_id: kid, status: 'prihvacena' })));
+
+    // Dodajemo početne poruke u timski chat
+    await Poruka.bulkCreate([
+      { konverzacija_id: konv.id, posiljalac_id: tim.kapiten_id, tekst: `Pozdrav ekipo! Dobrodošli u zvanični chat za ${tim.naziv}.` },
+      { konverzacija_id: konv.id, posiljalac_id: clanoviIds[1], tekst: 'Pozdrav kapitene! Kada igramo sledeći skrim?' },
+      { konverzacija_id: konv.id, posiljalac_id: tim.kapiten_id, tekst: 'Provjerite kalendar, zakazao sam trening meč.' }
+    ]);
   }
 
   // ============================================================
-  // 4. MEČEVI (ISTORIJA ODIGRANIH + BUDUĆI ZAKAZANI)
+  // 4. ZAHTJEVI NA ČEKANJU (ZA DEMONSTRACIJU PROFESORU)
+  // ============================================================
+  // Nekoliko timova šalje zahtjeve Aninom i Markovom timu (prihvat/odbijanje na uvid)
+  const zZaAna = await ScrimZahtjev.create({
+    tim_posiljalac_id: svaTimovi[9].id, tim_primalac_id: timAna.id,
+    predlozeni_termin: danaUnazad(-2), broj_mapa: 3, pravila: 'Bo3 Tournament Standard', status: 'na_cekanju'
+  });
+
+  const zZaMarko = await ScrimZahtjev.create({
+    tim_posiljalac_id: timAna.id, tim_primalac_id: timMarko.id,
+    predlozeni_termin: danaUnazad(-3), broj_mapa: 3, pravila: 'Bo3 Elitni meč', status: 'na_cekanju'
+  });
+
+  const zZaFilip = await ScrimZahtjev.create({
+    tim_posiljalac_id: svaTimovi[10].id, tim_primalac_id: timFilip.id,
+    predlozeni_termin: danaUnazad(-1), broj_mapa: 1, pravila: 'Bo1 Warmup', status: 'na_cekanju'
+  });
+
+  // ============================================================
+  // 5. MEČEVI (ODIGRANI + BUDUĆI KALENDAR)
   // ============================================================
   let ukupnoOdigranih = 0;
   let ukupnoZakazanih = 0;
@@ -202,54 +248,32 @@ async function seed() {
         const t1 = timovi[i];
         const t2 = timovi[j];
 
-        // Odigrani mečevi
-        const brOdigranih = nasumicniBroj(1, 2);
-        for (let m = 0; m < brOdigranih; m++) {
-          const ishod = nasumicno(['tim1', 'tim2', 'nerijeseno']);
-          const z = await ScrimZahtjev.create({
-            tim_posiljalac_id: t1.id, tim_primalac_id: t2.id,
-            predlozeni_termin: danaUnazad(nasumicniBroj(3, 40)), broj_mapa: 3, pravila: 'Standard', status: 'prihvacen'
-          });
-          const mec = await ScrimMec.create({
-            zahtjev_id: z.id, tim1_id: t1.id, tim2_id: t2.id, zakazano_za: z.predlozeni_termin,
-            status: 'odigran', ishod, pobjednik_tim_id: ishod === 'tim1' ? t1.id : ishod === 'tim2' ? t2.id : null,
-            rezultat: ishod === 'nerijeseno' ? '1-1' : '2-1'
-          });
-          
-          await upisiPrisustvaZaMec(mec.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'moze');
-          ukupnoOdigranih++;
-        }
+        // Odigrani meč (prošlost)
+        const zOdigran = await ScrimZahtjev.create({
+          tim_posiljalac_id: t1.id, tim_primalac_id: t2.id,
+          predlozeni_termin: danaUnazad(nasumicniBroj(2, 25)), broj_mapa: 3, pravila: 'Standard', status: 'prihvacen'
+        });
+        const mecOdigran = await ScrimMec.create({
+          zahtjev_id: zOdigran.id, tim1_id: t1.id, tim2_id: t2.id, zakazano_za: zOdigran.predlozeni_termin,
+          status: 'odigran', ishod: 'tim1', pobjednik_tim_id: t1.id, rezultat: '2-1'
+        });
+        await upisiPrisustvaZaMec(mecOdigran.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'moze');
+        ukupnoOdigranih++;
 
-        // Budući meč
-        if (Math.random() < 0.6) {
-          const termin = danaUnazad(-nasumicniBroj(2, 12));
-          const z = await ScrimZahtjev.create({
-            tim_posiljalac_id: t1.id, tim_primalac_id: t2.id,
-            predlozeni_termin: termin, broj_mapa: 3, pravila: 'Bo3', status: 'prihvacen'
-          });
-          const mec = await ScrimMec.create({ zahtjev_id: z.id, tim1_id: t1.id, tim2_id: t2.id, zakazano_za: termin, status: 'zakazan' });
-          await upisiPrisustvaZaMec(mec.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'na_cekanju');
-          ukupnoZakazanih++;
-        }
+        // Zakazan meč (budućnost za kalendar)
+        const zZakazan = await ScrimZahtjev.create({
+          tim_posiljalac_id: t1.id, tim_primalac_id: t2.id,
+          predlozeni_termin: danaUnazad(-nasumicniBroj(2, 14)), broj_mapa: 3, pravila: 'Bo3', status: 'prihvacen'
+        });
+        const mecZakazan = await ScrimMec.create({ zahtjev_id: zZakazan.id, tim1_id: t1.id, tim2_id: t2.id, zakazano_za: zZakazan.predlozeni_termin, status: 'zakazan' });
+        await upisiPrisustvaZaMec(mecZakazan.id, t1, clanoviMap.get(t1), t2, clanoviMap.get(t2), 'na_cekanju');
+        ukupnoZakazanih++;
       }
     }
   }
 
-  // Sporni meč za Admin panel
-  const sporniT1 = svaTimovi[0];
-  const sporniT2 = svaTimovi[1];
-  const zSporni = await ScrimZahtjev.create({
-    tim_posiljalac_id: sporniT1.id, tim_primalac_id: sporniT2.id,
-    predlozeni_termin: danaUnazad(1), broj_mapa: 3, pravila: 'Bo3', status: 'prihvacen'
-  });
-  const mecSporni = await ScrimMec.create({
-    zahtjev_id: zSporni.id, tim1_id: sporniT1.id, tim2_id: sporniT2.id,
-    zakazano_za: zSporni.predlozeni_termin, status: 'sporno', glas_tim1: 'pobjeda', glas_tim2: 'pobjeda'
-  });
-  await upisiPrisustvaZaMec(mecSporni.id, sporniT1, clanoviMap.get(sporniT1), sporniT2, clanoviMap.get(sporniT2), 'moze');
-
   // ============================================================
-  // 5. TURNIRI (15 UKUPNO — PROŠLI, U TOKU, PREDSTOJEĆI)
+  // 6. TURNIRI (15 UKUPNO)
   // ============================================================
   const turniriDef = [
     { naziv: 'LoL Jesenji Kup 2026', igra: igre[0], status: 'zavrsen', dana: 20 },
@@ -272,7 +296,7 @@ async function seed() {
   for (const tDef of turniriDef) {
     const turnir = await Turnir.create({
       naziv: tDef.naziv, igra_id: tDef.igra.id, datum: danaUnazad(tDef.dana),
-      max_timova: 4, format: 'single_elimination', status: tDef.status
+      max_timova: 8, format: 'single_elimination', status: tDef.status
     });
     const timoviIgre = timoviPoIgri.get(tDef.igra.id);
     if (timoviIgre.length >= 2) {
@@ -283,40 +307,24 @@ async function seed() {
     }
   }
 
-  // ============================================================
-  // 6. CHAT SA ADMINOM I DOSTIGNUĆA
-  // ============================================================
-  const kapitenSpornog = igraci.find(k => k.id === sporniT1.kapiten_id);
-  const konv = await Konverzacija.create({ tip: 'direktna' });
+  // Direct chat između Ane i Marka
+  const konvIzmedju = await Konverzacija.create({ tip: 'direktna' });
   await ClanKonverzacije.bulkCreate([
-    { konverzacija_id: konv.id, korisnik_id: kapitenSpornog.id, status: 'prihvacena' },
-    { konverzacija_id: konv.id, korisnik_id: admin.id, status: 'prihvacena' }
+    { konverzacija_id: konvIzmedju.id, korisnik_id: ana.id, status: 'prihvacena' },
+    { konverzacija_id: konvIzmedju.id, korisnik_id: marko.id, status: 'prihvacena' }
   ]);
-  const slikaDokaza = napraviSlikuDokaza('DOKAZ O POBJEDI', `Tim: ${sporniT1.naziv}`, 'Rezultat: 2-1 (potvrđeno)');
   await Poruka.bulkCreate([
-    { konverzacija_id: konv.id, posiljalac_id: kapitenSpornog.id, tekst: 'Pozdrav, poslao sam dokaz za sporni meč u prilogu.' },
-    { konverzacija_id: konv.id, posiljalac_id: kapitenSpornog.id, slika: slikaDokaza },
-    { konverzacija_id: konv.id, posiljalac_id: admin.id, tekst: 'Uredu, pregledaću i riješiti u admin panelu.' }
+    { konverzacija_id: konvIzmedju.id, posiljalac_id: ana.id, tekst: 'Ćao Marko, poslao sam vam zahtjev za skrim meč u League of Legends.' },
+    { konverzacija_id: konvIzmedju.id, posiljalac_id: marko.id, tekst: 'Odlično! Pregledaću sa ekipom pa prihvatam na sajtu.' }
   ]);
-
-  await Dostignuce.create({ naziv: 'Prvih 10 mečeva', opis: 'Prisustvujte na 10 skrim mečeva.', uslov_tip: 'odigranih_meceva', uslov_vrijednost: 10 });
-  const dPobjeda = await Dostignuce.create({ naziv: 'Prva pobjeda', opis: 'Pobijedite u skrim meču.', uslov_tip: 'pobjeda', uslov_vrijednost: 1 });
-  await KorisnikDostignuce.findOrCreate({ where: { korisnik_id: igraci[0].id, dostignuce_id: dPobjeda.id } });
 
   console.log('\n======================================================================');
-  console.log(' SEED USPJEŠNO ZAVRŠEN!');
+  console.log(' SEED USPJEŠNO ZAVRŠEN ZA DEMONSTRACIJU!');
   console.log('======================================================================');
-  console.log(` Ukupno igrača: ${igraci.length} (svaki u TAČNO 4 tima i kapiten u bar 1)`);
-  console.log(` Ukupno timova: ${svaTimovi.length}`);
-  console.log(` Odigranih mečeva: ${ukupnoOdigranih} | Zakazanih: ${ukupnoZakazanih}`);
-  console.log(` Ukupno turnira: ${turniriDef.length}`);
-  console.log('======================================================================');
-  console.log(' 3 GLAVNA TEST NALOGA (Lozinka za sve: lozinka123):');
-  console.log(` 1. ${triGlavna[0].email}`);
-  console.log(` 2. ${triGlavna[1].email}`);
-  console.log(` 3. ${triGlavna[2].email}`);
-  console.log(' ADMIN NALOG:');
-  console.log(` admin@scrimfinder.me (Lozinka: lozinka123)`);
+  console.log(' 3 SPECIFIČNA TEST NALOGA (Lozinka za sve: lozinka123):');
+  console.log(` 1. Filip Vujović  : ${filip.email}`);
+  console.log(` 2. Ana Radulović   : ${ana.email} (Kapiten: Podgoričke Mange - LoL)`);
+  console.log(` 3. Marko Backović  : ${marko.email} (Kapiten: Nikšićki Vukovi - LoL)`);
   console.log('======================================================================\n');
 
   process.exit(0);
